@@ -275,12 +275,12 @@ class NFA() extends FiniteAutomaton
 	val strt    = epsilonTransitionDFAify(this.start)
 	if (DEBUG) println(s"DFAify start setState: ${strt}")
 	val found : Set[Set[State]]  = Set(strt)
-	val check : Set[Set[State]]  = Set(strt)									// The set of setStates not yet checked
+	val check : Set[Set[State]]  = Set(strt)						// The set of setStates not yet checked
 	val delta1  = Map[(Set[State],Symbl),Set[State]]()
 	val stateNames = Map[Set[State],State]()
 	stateNames += (strt -> setToState(strt))
 	val sigma  = Set[Symbl]()
-	while ( check.size >0 ){								   // While there are states we have not yet found the transition for
+	while ( check.size >0 ){					// While there are states we have not yet found the transition for
 	      val temp = check.clone								   // The things to check this round
 	      if (DEBUG) println(s"checking the following setStates this round: ${temp}")
 	      for ( setState <- temp ){								   // For each setState to check this round
@@ -323,7 +323,7 @@ class NFA() extends FiniteAutomaton
 	    if (DEBUG) println(s"States now: ${states}")
 	    delta += (fromState,symbl) -> toState								// Update the delta function created earlier
 	    if (DEBUG) println(s"Delta now says: ${delta}")
-	    if ( (setState intersect this.accept).size != 0 ) {						// Update the set of accept states if this setState contained one
+	    if ( (setState intersect this.accept).size != 0 ) {				// Update the set of accept states if this setState contained one
 	       if (DEBUG) println("Found a new accept state: ${state}")
 	       accept += fromState
 	    } // if 				
@@ -340,12 +340,7 @@ class NFA() extends FiniteAutomaton
 	s"Accept: ${setToString(accept)}\n" +
 	s"Delta: \n$deltaString"
     }
-/*
-    override def toString() : String =
-    {
-	s"$name:\nStates:\n${setToString(states)}\nAlphabet:\n${setToString(alphabet)}\nDelta:\n$deltaString\nStart:\n$start\nAccept States:\n${setToString(accept)}"
-    }
-*/
+
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /*			The private methods.				 */
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -464,7 +459,7 @@ class NFA() extends FiniteAutomaton
 	       } // case 1
 	  case 2 => {
 	  	 for ( state <- toStates if !(states contains state ) )
-		       	     		 println(s"Invalid transition: delta($fromState,$inputSymbl)->$toStates) :: $state not in the set of states for ${name}.")
+		       	     println(s"Invalid transition: delta($fromState,$inputSymbl)->$toStates) :: $state not in the set of states for ${name}.")
 		 valid = false
 	       } // case 2
 	  case 3 => {
@@ -472,7 +467,8 @@ class NFA() extends FiniteAutomaton
 		 valid = false
 	       } // case 3
 	  case 4 => {
-	       println(s"Invalid transition: delta($fromState,$inputSymbl)->$toStates) :: transition already specified for input ${transition._1} for ${name}.")
+	       println(s"Invalid transition: delta($fromState,$inputSymbl)->$toStates) " +
+	       	       s":: transition already specified for input ${transition._1} for ${name}.")
 	       valid = false
 	       } // case 4 
 	}
@@ -905,7 +901,7 @@ object NFATester extends App{
 
 
 }
-
+/*
 object newTest extends App{
 
        def mapFromSet( set : Set[((State,Symbl),Set[State])] ) : Map[(State,Symbl),Set[State]] = {
@@ -945,3 +941,4 @@ object newTest extends App{
        val m1dd = m1.DFAify()
 
 }
+*/

@@ -285,22 +285,9 @@ class DFA() extends FiniteAutomaton
     }
 
     def equals(m2 : NFA) : Boolean = equals(m2.DFAify())
-/*
-    def equals2(m2: FiniteAutomaton) : (Boolean,RegEx,RegEx) = 
-    {
-    	val m1Comp = complement()
-	val m2Comp = m2.complement()
-	val mm1	   = intersect(m2Comp)
-	val mm1r   = GNFA.convert(mm1)
-	val mm2    = m2.intersect(m1Comp)
-	val mm2r   = GNFA.convert(mm2)
-	val mm	   = mm1.union(mm2)
-	return (mm.recognizesEmptyLanguage(),mm1r,mm2r)
-    }
-*/  
+
     override def toString() : String =
     {
-	//s"$name:\nStates:\n${setToString(states)}\nAlphabet:\n${setToString(alphabet)}\nStart:\n$start\nAccept States:\n${setToString(accept)}\nDelta:\n$deltaString\n"
 	s"$name\n" +
 	s"Start: $start\n" +
 	s"Accept: ${setToString(accept)}\n" +
@@ -743,9 +730,4 @@ object DFATester extends App{
        } // for
 
        testSuiteEquality(machines,answers2)       
-}
-
-object smallDFAtest extends App{
-
-
 }

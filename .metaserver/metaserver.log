@@ -1,0 +1,9 @@
+08:24:34.514 INFO  s.m.l.Main$ - Starting server in /Users/MacBot/Projects/TheoryAssistant
+08:24:34.535 INFO  s.m.l.Main$ - Classpath: /Users/MacBot/.atom/packages/ide-scala/coursier
+08:24:37.653 INFO  s.m.l.Formatter$ - Classloading scalafmt with 28 downloaded jars
+08:24:38.764 INFO  s.m.l.ScalametaLanguageServer - Initialized with /Users/MacBot/Projects/TheoryAssistant, InitializeParams(7410,/Users/MacBot/Projects/TheoryAssistant/,ClientCapabilities())
+08:24:39.253 ERROR l.c.LanguageServer$$anon$1 - Invalid Notification: List((,List(JsonValidationError(List(notification parameters must be given),WrappedArray())))) - Message: JsonRpcNotificationMessage(initialized,NoParams)
+08:24:39.297 INFO  s.m.l.p.DocumentHighlightProvider$ - Document highlight in Uri(file:///Users/MacBot/Projects/TheoryAssistant/src/main/scala/theory/DFA.scala)
+08:24:39.299 INFO  s.m.l.s.InMemorySymbolIndex - resolveName at Uri(file:///Users/MacBot/Projects/TheoryAssistant/src/main/scala/theory/DFA.scala):267:67
+08:24:39.299 INFO  s.m.l.p.DocumentHighlightProvider$ - Document highlight in Uri(file:///Users/MacBot/Projects/TheoryAssistant/src/main/scala/theory/DFA.scala)
+08:24:39.302 INFO  s.m.l.s.InMemorySymbolIndex - resolveName at Uri(file:///Users/MacBot/Projects/TheoryAssistant/src/main/scala/theory/DFA.scala):267:67
