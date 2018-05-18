@@ -7,7 +7,7 @@
 
 package theory
 
-import scala.collection.mutable.{Set,Map}
+import scala.collection.mutable.{Set,Map,Stack}
 //import scala.collection.immutable.Map
 import TypeDefs._
 
@@ -27,59 +27,64 @@ class DFA() extends FiniteAutomaton
 
     private val DEBUG    = false
 
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+    /*		The private instance variables		   */		// TODO : make start and name a val
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+    private val states   = Set[State]()
+    private val alphabet = Set[Symbl]()
+    private val delta    = Map[(State,Symbl),State]()
+    private var start    = ""
+    private val ac  cept   = Set[State]()
+    private var name 	   = "M"
+    private var valid    = true
+    private var state    = start
 
-	      //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
-	      /*		The private instance variables		   */		// TODO : make start and name a val
-	      //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+    def this( states   : Set[State],
+              alphabet : Set[Symbl],
+              delta    : Map[(State,Symbl),State],
+              start    : State,
+              accept   : Set[State], name : String )
+    {
+  	  this()
+  	  if (DEBUG) println(s"Making new machine: $name")
+      this.name = name
+    	this.states   ++= (states union Set(NullState))
+  	  this.alphabet ++= alphabet
+  	  setDelta( delta )
+  	  setStart( start )
+  	  setAccept( accept )
+  	  this.state = start
+  	  if (DEBUG) println(s"new machine ${toString()}")
+    } // this
 
-
-
-      private val states   = Set[State]()
-      private val alphabet = Set[Symbl]()
-      private val delta    = Map[(State,Symbl),State]()
-      private var start    = ""
-      private val accept   = Set[State]()
-      private var name 	   = "M"
-
-      private var valid    = true
-      private var state    = start
-      
-      def this(states : Set[State], alphabet : Set[Symbl], delta : Map[(State,Symbl),State], start : State, accept : Set[State], name : String ){
-      	  this()
-	  if (DEBUG) println(s"Making new machine: $name")
-      	  this.name = name
-  	  this.states   ++= (states union Set(NullState))
-	  this.alphabet ++= alphabet
-	  setDelta( delta ) 
-	  setStart( start )
-	  setAccept( accept )
-	  this.state = start
-	  if (DEBUG) println(s"new machine ${toString()}")
-      } // this
-
-      def this(states : Set[State], alphabet : Set[Symbl], delta : Set[((State,Symbl),Set[State])], start : State, accept : Set[State], name : String ){
-      	  this()
-	  val newDelta = Map[(State,Symbl),State]()
-	  for ( d <- delta ) {
-	      if ( d._2.size > 1 ){
-	      	 println(s"Error in constructor for $name specifying transition function for transition $d : too many states in the output.")
-	      	 valid = false
-	      } // if
-	      else newDelta += d._1 -> d._2.toArray.head
-	  }
-	  if (valid) {
-	     if (DEBUG) println(s"Making new machine: $name")
-      	     this.name = name
-  	     this.states   ++= (states union Set(NullState))
-	     this.alphabet ++= alphabet
-	     setDelta( newDelta ) 
-	     setStart( start )
-	     setAccept( accept )
-	     this.state = start
-	     if (DEBUG) println(s"new machine ${toString()}")
-	  }
-	  
-      } // this
+    def this( states   : Set[State],
+              alphabet : Set[Symbl],
+              delta    : Set[((State,Symbl),Set[State])],
+              start    : State,
+              accept   : Set[State],
+              name     : String )
+    {
+      this()
+  	  val newDelta = Map[(State,Symbl),State]()
+  	  for ( d <- delta ) {
+  	      if ( d._2.size > 1 ){
+  	      	 println(s"Error in constructor for $name specifying transition function for transition $d : too many states in the output.")
+  	      	 valid = false
+  	      } // if
+  	      else newDelta += d._1 -> d._2.toArray.head
+  	  } // for
+  	  if (valid) {
+  	     if (DEBUG) println(s"Making new machine: $name")
+         this.name = name
+    	   this.states   ++= (states union Set(NullState))
+  	     this.alphabet ++= alphabet
+  	     setDelta( newDelta )
+  	     setStart( start )
+  	     setAccept( accept )
+  	     this.state = start
+  	     if (DEBUG) println(s"new machine ${toString()}")
+  	  } // if
+    } // this
 
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -90,42 +95,45 @@ class DFA() extends FiniteAutomaton
 
     private def setDelta(delta : Map[(State,Symbl),State]) = // : Map[(State,Symbl),State] =
     {
-	if (DEBUG) println(s"Setting delta for $name.")
-        for ( transition <- delta if validTransition(transition) )  this.delta += (transition._1 -> transition._2)
-	
-	for ( symbl <- alphabet ) {								//Fill out the unspecified transitions.
-	    for ( state <- states ) {
-	    	val input = (state,symbl)
-	    	if ( !( delta contains input) ) this.delta += input -> NullState
-	    }
-	} // for state
-	
-	if (DEBUG) println(s"Delta after setting: ${this.delta}")
+      if (DEBUG) println(s"Setting delta for $name.")
+
+      for ( transition <- delta if validTransition(transition) )  {
+        this.delta += (transition._1 -> transition._2)
+	    } // for transition
+
+	    for ( symbl <- alphabet ) {								//Fill out the unspecified transitions.
+	        for ( state <- states ) {
+	    	    val input = (state,symbl)
+	    	    if ( !( delta contains input) ) this.delta += input -> NullState
+	        } // for state
+	    } // for symbl
+
+	    if (DEBUG) println(s"Delta after setting: ${this.delta}")
     } // setDelta
 
     private def setStart( start : State ){
-    	    if ( states contains start ) this.start = start
+      if ( states contains start ) this.start = start
 	    else {
 	    	 println(s"Invalid start state for $name : $start")
-		 valid = false
+		     valid = false
 	    } // else
     } // setStart()
 
     private def setAccept(accept : Set[State]) {
-    	    if (DEBUG) println(s"Setting accept states with $accept")
-    	    if ( (accept -- this.states).size == 0 ) {
+      if (DEBUG) println(s"Setting accept states with $accept")
+    	if ( (accept -- this.states).size == 0 ) {
 	       if (DEBUG) println(s"accept after if: $accept")
 	       this.accept ++= accept
-	    }
+	    } // if
 	    else {
-	    	 for ( state <- accept if ( !((this.states contains state) || accept.size==0) ) ) println(s"Invalid accept state for $name : |$state|")
-		 valid = false
+        for ( state <- accept if ( !((this.states contains state) || accept.size==0) ) ) {
+          println(s"Invalid accept state for $name : |$state|")
+        }
+		    valid = false
 	    } // else
 	    if (DEBUG) println(s"this.accept: ${this.accept}")
     } // setAccept
-    
-    
-    
+
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     // The Accessor methods for the private instance variables
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -133,9 +141,9 @@ class DFA() extends FiniteAutomaton
     def getStates() = Set[State]() ++ states
 
     def getAlphabet() = Set[Symbl]() ++ alphabet
-	
+
     def getDelta() = Map[(State,Symbl),State]() ++ delta
-    
+
     def getAcceptStates() = Set[State]() ++ accept
 
     def getStartState() = start
@@ -150,148 +158,199 @@ class DFA() extends FiniteAutomaton
 
     def compute(string: String) : Boolean =
     {
-	for ( s <- string ) {
-	    val input = (state,s.toString)
-	    if (DEBUG) println(s"reading input: $input from state: $state")
-	    state = delta(input)
-	    if (DEBUG) println(s"new state: $state")
-	}
-	val finalState = state
-	state = start
-	return accept contains finalState
-    }
+      for ( s <- string ) {
+	       val input = (state,s.toString)
+	       if (DEBUG) println(s"reading input: $input from state: $state")
+	       state = delta(input)
+	       if (DEBUG) println(s"new state: $state")
+	    } // for
+	    val finalState = state
+	    state = start
+	    return accept contains finalState
+    } // compute
 
     def complement() : DFA =
     {
     	val accept = states -- this.accept
-       	new DFA(states,alphabet,delta,start,accept,s"${name}_COMP")
+      new DFA(states,alphabet,delta,start,accept,s"${name}_COMP")
     }
 
     def union(m2 : DFA) : DFA =
     {
-	val states = Set[State]()
-	
-	val delta1 = this.delta			//this.map
-	val delta2 = m2.delta			//m2.map
-	val delta  = Map[(State,Symbl),State]() //Set[((State,Symbl),State)]()
-	
-	val accept1 = this.getAcceptStates()
-	val accept2 = m2.getAcceptStates()
-	val accept  = Set[State]()
+      val states = Set[State]()
 
-	val start1 = this.getStartState()
-	val start2 = m2.getStartState()
-	val start  = start1+","+start2
-	
-	val name1 = this.getName()
-	val name2 = m2.getName()
-	val name  = name1+"_UNION_"+name2
-	
-	for( state <- this.states ){
-	     for ( state2 <- m2.getStates() ){
-	     	 val newFrom = state+","+state2
-	     	 states += newFrom
-	     	 if ( (accept1 contains state) || (accept2 contains state2) ) accept += newFrom 
-	     	 for ( symbl <- alphabet ) {
-		     val newInput = (newFrom,symbl)
-		     val newTo   = delta1(state,symbl)+","+delta2(state2,symbl)
- 		     delta +=  ( newInput -> newTo ) //(((newFrom,symbl),newTo))
-		 } // for symbl
-	     } // for m2.states
-	} // for this.states
-	new DFA(states, alphabet, delta, start, accept, name)
+	    val delta1 = this.delta
+	    val delta2 = m2.delta
+	    val delta  = Map[(State,Symbl),State]()
+
+	    val accept1 = this.getAcceptStates()
+	    val accept2 = m2.getAcceptStates()
+      val accept  = Set[State]()
+
+	    val start1 = this.getStartState()
+	    val start2 = m2.getStartState()
+	    val start  = start1+","+start2
+
+	    val name1 = this.getName()
+	    val name2 = m2.getName()
+	    val name  = name1+"_UNION_"+name2
+
+      states += start
+
+      val unchecked = Stack((start1,start2))
+      val checked = Set[state]()
+
+      while( ! unchecked.isEmpty() ) {
+        (check1,check2) = unchecked.pop()
+        newFrom = check1+","+check2
+        checked += newFrom
+        for ( symbl <- alphabet ) {
+          (new1,new2) = (delta1(check1,symbl),delta2(check2,symbl))
+          newInput = (newFrom,symbl)
+          newTo = new1+","+new2
+          delta += (newFrom -> newTo)
+          if ( ! checked contains (new1,new2) ) {
+            unchecked += (new1,new2)
+            states += newTo
+            if ( (accept1 contains new1) || (accept2 contains new2) ) {
+              accept += newTo
+            } // if
+          } // if
+        } //  for symbol
+      } // while
+      /*
+	    for( state <- this.states ){
+	         for ( state2 <- m2.getStates() ){
+	         	 val newFrom = state+","+state2
+	         	 states += newFrom
+	         	 if ( (accept1 contains state) || (accept2 contains state2) ) accept += newFrom
+	         	 for ( symbl <- alphabet ) {
+	    	         val newInput = (newFrom,symbl)
+	    	         val newTo   = delta1(state,symbl)+","+delta2(state2,symbl)
+    		          delta +=  ( newInput -> newTo ) //(((newFrom,symbl),newTo))
+	    	     } // for symbl
+	         } // for m2.states
+	    } // for this.states
+      */
+	    new DFA(states, alphabet, delta, start, accept, name)
     } // union
 
     def intersect(m : DFA) : DFA =
     {
-	val m2 : DFA = m.DFAify()
-	if (DEBUG) println(s"intersecting $toString \nand ${m2.toString}")
-	
-	val states = Set[State]()
+	    val m2 : DFA = m.DFAify()
+	    if (DEBUG) println(s"intersecting $toString \nand ${m2.toString}")
 
-	val start1 = this.getStartState()
-	val start2 = m2.getStartState()
-	val start  = start1+","+start2
-	
-	val delta1 = this.delta // this.map
-	val delta2 = m2.delta // m2.map
-	val delta  = Map[(State,Symbl),State]() // Set[((State,Symbl),State)]()
-	
-	val accept1 = this.getAcceptStates()
-	val accept2 = m2.getAcceptStates()
-	val accept  = Set[State]()
-	
+	    val states = Set[State]()
 
-	val name1 = this.getName()
-	val name2 = m2.getName()
-	val name  = name1+"_UNION_"+name2
-	
-	for( state <- this.states ){
-	     for ( state2 <- m2.getStates() ){
-	     	 if (DEBUG) println(s"working on combination state ($state,$state2)")
-	     	 val newFrom = state+","+state2
-		 if (DEBUG) println(s"New state adding is: is $newFrom")
-	     	 states += newFrom
-	     	 if ( (accept1 contains state) && (accept2 contains state2) ) accept += newFrom 
-	     	 for ( symbl <- alphabet ) {
-		     if (DEBUG) println(s"Working on symbol $symbl via ($state,$symbl) and ($state2,$symbl)")
-		     val newInput = (newFrom,symbl)
-		     val newTo   = delta1(state,symbl)+","+delta2(state2,symbl)
- 		     delta += (newInput -> newTo) //(((newFrom,symbl),newTo))
-		 } // for symbl
-	     } // for m2.states
-	} // for this.states
-	new DFA(states, alphabet, delta, start, accept, name)
+	    val start1 = this.getStartState()
+	    val start2 = m2.getStartState()
+	    val start  = start1+","+start2
+
+	    val delta1 = this.delta // this.map
+	    val delta2 = m2.delta // m2.map
+	    val delta  = Map[(State,Symbl),State]() // Set[((State,Symbl),State)]()
+
+	    val accept1 = this.getAcceptStates()
+	    val accept2 = m2.getAcceptStates()
+	    val accept  = Set[State]()
+
+	    val name1 = this.getName()
+	    val name2 = m2.getName()
+	    val name  = name1+"_INTERSECT_"+name2
+
+      states += start
+      val unchecked = Stack((start1,start2))
+      val checked = Set[state]()
+
+      while( ! unchecked.isEmpty() ) {
+        (check1,check2) = unchecked.pop()
+        newFrom = check1+","+check2
+        checked += newFrom
+        for ( symbl <- alphabet ) {
+          (new1,new2) = (delta1(check1,symbl),delta2(check2,symbl))
+          newInput = (newFrom,symbl)
+          newTo = new1+","+new2
+          delta += (newFrom -> newTo)
+          if ( ! checked contains (new1,new2) ) {
+            unchecked += (new1,new2)
+            states += newTo
+            if ( (accept1 contains new1) || (accept2 contains new2) ) {
+              accept += newTo
+            } // if
+          } // if
+        } //  for symbol
+      } // while
+
+      /*
+	    for( state <- this.states ){
+	         for ( state2 <- m2.getStates() ){
+	            if (DEBUG) println(s"working on combination state ($state,$state2)")
+	         	  val newFrom = state+","+state2
+	    	      if (DEBUG) println(s"New state adding is: is $newFrom")
+	         	  states += newFrom
+	         	  if ( (accept1 contains state) && (accept2 contains state2) ) accept += newFrom
+	         	  for ( symbl <- alphabet ) {
+	    	          if (DEBUG) println(s"Working on symbol $symbl via ($state,$symbl) and ($state2,$symbl)")
+	    	          val newInput = (newFrom,symbl)
+	    	          val newTo   = delta1(state,symbl)+","+delta2(state2,symbl)
+    		          delta += (newInput -> newTo) //(((newFrom,symbl),newTo))
+	    	      } // for symbl
+	         } // for m2.states
+	    } // for this.states
+      */
+	    new DFA(states, alphabet, delta, start, accept, name)
     } // intersect
 
     def kleeneStar() = NFAify().kleeneStar().DFAify()
-    
+
     def NFAify()  =
     {
-	val newDelta = Map[(State,Symbl),Set[State]]()
-	for ( d <- delta ) newDelta += d._1 -> Set(d._2) 
-	new NFA(states,alphabet,newDelta,start,accept,s"${name}_NFA")
+      val newDelta = Map[(State,Symbl),Set[State]]()
+	    for ( d <- delta ) newDelta += d._1 -> Set(d._2)
+	    new NFA(states,alphabet,newDelta,start,accept,s"${name}_NFA")
     }
 
     def recognizesEmptyLanguage() : Boolean =
     {
-    	val reachable = Set[State]()
-	reachable += start
-	val toTest    = reachable.clone
-	while( toTest.size != 0 ){
-	    val testClone = toTest.clone
-	    for( symbl <- alphabet ){
-	    	 for ( state <- testClone ){
-		     toTest -= state						// w/o creating a clone of toTest, would this mess up the iterator? 
-	    	     val newState = delta(state,symbl)
-		     if( !(reachable contains newState) ){
-		     	 toTest += newState					// would this, more importatly?  
-			 reachable += newState
-		     } // if
-	    	 }// for state 
-	    } // for symbl
-	} // while
-	return (accept intersect reachable).size == 0 
+      val reachable = Set[State]()
+	    reachable += start
+	    val toTest    = reachable.clone
+	    while( toTest.size != 0 ){
+	        val testClone = toTest.clone
+	        for( symbl <- alphabet ){
+	        	 for ( state <- testClone ){
+	    	         toTest -= state						// w/o creating a clone of toTest, would this mess up the iterator?
+	        	     val newState = delta(state,symbl)
+	    	          if( !(reachable contains newState) ){
+	    	     	        toTest += newState					// would this, more importatly?
+	    		            reachable += newState
+	    	          } // if
+	        	 }// for state
+	        } // for symbl
+	    } // while
+	    return (accept intersect reachable).size == 0
     } // empty
 
-    def equals(m2: DFA) : Boolean = 
+    def equals(m2: DFA) : Boolean =
     {
-    	val m1Comp = complement()
-	val m2Comp = m2.complement()
-	val mm1	   = intersect(m2Comp)
-	val mm2    = m2.intersect(m1Comp)
-	val mm	   = mm1.union(mm2)
-	return mm.recognizesEmptyLanguage()
+
+      val m1Comp = complement()
+	    val m2Comp = m2.complement()
+	    val mm1	   = intersect(m2Comp)
+	    val mm2    = m2.intersect(m1Comp)
+	    val mm	   = mm1.union(mm2)
+
+	    return mm.recognizesEmptyLanguage()
     }
 
     def equals(m2 : NFA) : Boolean = equals(m2.DFAify())
 
     override def toString() : String =
     {
-	s"$name\n" +
-	s"Start: $start\n" +
-	s"Accept: ${setToString(accept)}\n" +
-	s"Delta: \n$deltaString"
+	     s"$name\n"                          +
+	     s"Start: $start\n"                  +
+	     s"Accept: ${setToString(accept)}\n" +
+	     s"Delta: \n$deltaString"
     }
 
     def DFAify() = this
@@ -302,64 +361,75 @@ class DFA() extends FiniteAutomaton
 
     private def validTransition( transition : ((State,Symbl),State) ) : Boolean =
     {
-	if (DEBUG) println(s"validating transition: $transition")
-	return ( validFromState(transition) && validToState(transition) && validInputSymbl(transition) && newInput(transition) )
+      if (DEBUG) println(s"validating transition: $transition")
+	    return ( validFromState(transition)  &&
+               validToState(transition)    &&
+               validInputSymbl(transition) &&
+               newInput(transition) )
     } // validTransition
-    
-    private def validFromState(transition : ((State,Symbl),State) )    : Boolean = {    	    
-    	    if (states contains transition._1._1) return true
+
+    private def validFromState(transition : ((State,Symbl),State) ) : Boolean =
+    {
+      if (states contains transition._1._1) return true
 	    else handleInvalid(1,transition)
     } // validFromState
-    
-    private def validToState(transition : ((State,Symbl),State))      : Boolean = {
-    	    if (states contains transition._2) return true
-	    else handleInvalid(2,transition) 
+
+    private def validToState(transition : ((State,Symbl),State)) : Boolean =
+    {
+      if (states contains transition._2) return true
+	    else handleInvalid(2,transition)
     } // validToState
-    
-    private def validInputSymbl( transition : ((State,Symbl),State) ) : Boolean = {
-    	    if (alphabet contains transition._1._2) return true
-	    else handleInvalid(3,transition) 
+
+    private def validInputSymbl( transition : ((State,Symbl),State) ) : Boolean =
+    {
+      if (alphabet contains transition._1._2) return true
+	    else handleInvalid(3,transition)
     }
-    
-    private def newInput( transition : ((State,Symbl),State))	: Boolean = {
-    	    if (delta contains transition._1 ) handleInvalid(4,transition)
+
+    private def newInput( transition : ((State,Symbl),State))	: Boolean =
+    {
+    	if (delta contains transition._1 ) handleInvalid(4,transition)
 	    else return true
     }
 
-    private def handleInvalid(i : Int, transition : ((State,Symbl),State)) : Boolean = {
-        val fromState  = transition._1._1
-	val inputSymbl = transition._1._2
-	val toState    = transition._2
-        i match{
-	  case 1 => {
-	  	 println(s"Invalid transition: delta($fromState,$inputSymbl)->$toState) :: $fromState not in the set of states for ${name}.")
-		 valid = false
+    private def handleInvalid(i : Int, transition : ((State,Symbl),State)) : Boolean =
+    {
+      val fromState  = transition._1._1
+	    val inputSymbl = transition._1._2
+	    val toState    = transition._2
+      i match{
+	       case 1 => {
+	  	       println(s"Invalid transition: delta($fromState,$inputSymbl)->$toState)"+
+                     s" :: $fromState not in the set of states for ${name}.")
+		         valid = false
 	       } // case 1
-	  case 2 => {
-	  	 println(s"Invalid transition: delta($fromState,$inputSymbl)->$toState) :: $toState not in the set of states for ${name}.")
-		 valid = false
+	       case 2 => {
+	  	       println(s"Invalid transition: delta($fromState,$inputSymbl)->$toState)"+
+                     s" :: $toState not in the set of states for ${name}.")
+		         valid = false
 	       } // case 2
-	  case 3 => {
-	    	 println(s"Invalid transition: delta($fromState,$inputSymbl)->$toState) :: $inputSymbl not in the alphabet for ${name}.")
-		 valid = false
+	       case 3 => {
+	    	     println(s"Invalid transition: delta($fromState,$inputSymbl)->$toState)"+
+                     s" :: $inputSymbl not in the alphabet for ${name}.")
+		         valid = false
 	       } // case 3
-	  case 4 => {
-	       println(s"Invalid transition: delta($fromState,$inputSymbl)->$toState) :: transition already specified for input ${transition._1} for ${name}.")
-	       valid = false
-	       } // case 4 
-	}
-	false
+	       case 4 => {
+             println(s"Invalid transition: delta($fromState,$inputSymbl)->$toState)"+
+                     s" :: transition already specified for input ${transition._1} for ${name}.")
+	           valid = false
+	       } // case 4
+	    } // match
+	    false
     } // handleInvalid
 
     def setToString(set : Set[String]) : String = if (set.size!=0) "{" + set.reduceLeft(_ + ";" +_) + "}" else "{}"
-    
-    def deltaString : String = 
+
+    def deltaString : String =
     {
-	var str = "" 
-	//for ( key <- delta.keys ) str = str + s"$key => ${delta(key)}\n"
-	for ( (k,v) <- delta ) str = str + s"$k -> $v\n"
-	str
-    }
+      var str = ""
+	    for ( (k,v) <- delta ) str = str + s"$k -> $v\n"
+	    str
+    } // deltaString
 
 }// DFA
 
@@ -367,27 +437,27 @@ object DFATestMethods{
        def testAcceptance(m1 : DFA , s : String , expRes : Boolean){
        	   m1.compute(s) == expRes
        } // testAcceptance
-       
+
        def testEquality(m1 : DFA , m2 : DFA , expRes : Boolean){
        	   m1.equals(m2) == expRes
        } // testEquality
-       
+
        def testSuiteEquality(machines : Array[DFA], answers : Array[Array[Boolean]]){
        	   var pass = true
        	   for ( i <- 0 until answers.length ) {
-	       for ( j <- i until answers.length ) {
-	       	   val testRes = machines(i).equals(machines(j))
-		   val expRes  = answers(i)(j)
-		   val m1s     = machines(i).toString()
-		   val m2s     = machines(j).toString()
-	       	   if ( !(testRes == expRes) ){
-		      println(s"Test failed for equality. ${m1s}\n${m2s}\nExpected: ${expRes}\nObserved: ${testRes}")
-		      println(s"i: ${i+1}, j: ${j+1}")
-		   } // if
-	       } // for j
-	       if (pass) println(s"Test suite equality passed for ${machines(i).getName()}")
-	   } // for i
-	   if (pass) println(s"testSuiteEqulity passed") 
+	            for ( j <- i until answers.length ) {
+	       	       val testRes = machines(i).equals(machines(j))
+		             val expRes  = answers(i)(j)
+		             val m1s     = machines(i).toString()
+		             val m2s     = machines(j).toString()
+	       	       if ( !(testRes == expRes) ){
+		                 println(s"Test failed for equality. ${m1s}\n${m2s}\nExpected: ${expRes}\nObserved: ${testRes}")
+		                 println(s"i: ${i+1}, j: ${j+1}")
+		             } // if
+	            } // for j
+	            if (pass) println(s"Test suite equality passed for ${machines(i).getName()}")
+	         } // for i
+	         if (pass) println(s"testSuiteEqulity passed")
        } // testSuiteEqualitydef
 
        def testSuiteAcceptance(machine : DFA, strings : Array[String], answers : Array[Boolean]){
@@ -395,14 +465,14 @@ object DFATestMethods{
        	   for ( i <- 0 until answers.length ) {
 	       	   val string = strings(i)
 	       	   val testRes = machine.compute(string)
-		   val expRes  = answers(i)
-		   val m1s     = machine.toString()
+		         val expRes  = answers(i)
+		         val m1s     = machine.toString()
 	       	   if ( !(testRes == expRes) ){
-		      println(s"Test failed for acceptance. \nString: ${string}\nMachine: \n${m1s}Expected: ${expRes}\nObserved: ${testRes}\n\n")
-		      pass = false
-		   } // if
-	   } // for
-	   if (pass) println(s"Acceptance suite passed for ${machine.getName()}") 
+		             println(s"Test failed for acceptance. \nString: ${string}\nMachine: \n${m1s}Expected: ${expRes}\nObserved: ${testRes}\n\n")
+		             pass = false
+		         } // if
+	         } // for
+	         if (pass) println(s"Acceptance suite passed for ${machine.getName()}")
        } // testSuiteEquality
 } // DFATestMethods
 
@@ -415,7 +485,7 @@ object DFATester extends App{
        def mapFromSet( set : Set[((State,Symbl),State)] ) : Map[(State,Symbl),State] = {
        	   val map = Map[(State,Symbl),State]()
        	   for ( input <- set ) map += (input._1 -> input._2)
-	   map
+	         map
        } // mapFromSet
 
        val states1 = Set("0","1")										//All even length strings
@@ -526,8 +596,8 @@ object DFATester extends App{
 
        val m1  = new DFA(states1,sigma1,delta1,start1,accept1,"M1")				// M1 accepts all even length strings
        val m2  = new DFA(states2,sigma2,delta2,start2,accept2,"M2")				// M2 accepts all strings with even 1s
-       println(s"M2 after construction : $m2")
-       val m3  = new DFA(states3,sigma3,delta3,start3,accept3,"M3")				// M3 accepts all strings with even 0s 
+
+       val m3  = new DFA(states3,sigma3,delta3,start3,accept3,"M3")				// M3 accepts all strings with even 0s
        val m4  = new DFA(states4,sigma4,delta4,start4,accept4,"M4")				// M4 accepts strings with odd 0s
        val m5  = new DFA(states5,sigma5,delta5,start5,accept5,"M5")				// M5 accepts no strings
        val m6  = new DFA(states6,sigma6,delta6,start6,accept6,"M6")				// M6 accepts all strings with substring 001
@@ -541,7 +611,7 @@ object DFATester extends App{
        val m14 = new DFA(states14,sigma14,delta14,start14,accept14,"M14")				// M14 accepts all strings without 001 as a substring
        val m15 = new DFA(states15,sigma15,delta15,start15,accept15,"M15")				// M15 accepts all strings with odd 0s and even 1s
        val m16 = new DFA(states16,sigma16,delta16,start16,accept16,"M16")				// M16 accepts all strings with odd 0s or even 1s
-       
+
        val m17 = m2.intersect(m3)
        val m18 = m2.union(m3)
        val m19 = m2.intersect(m4)
@@ -566,7 +636,7 @@ object DFATester extends App{
        val m38 = m16.complement()
 
        val strings = Array("","11111","111111","10101","101010","110011","001100","01100","10011")
-       
+
        val a1 = Array(true,false,true,false,true,true,true,false,false)
        val a2 = Array(true,false,true,false,false,true,true,true,false)
        val a3 = Array(true,true,true,true,false,true,true,false,true)
@@ -617,117 +687,117 @@ object DFATester extends App{
        for ( i <- 0 to 37){
        	   if (DEBUG) println(s"i: $i")
        	   answers2(i) = Array.fill(38)(false)
-	   if (DEBUG) println(s"answers2(i).length: ${answers2(i).length}")
+	         if (DEBUG) println(s"answers2(i).length: ${answers2(i).length}")
        	   for ( j <- 0 to 37 ) {
-	       if (DEBUG) println(s"j: $j")
-	       if ( i == j ) answers2(i)(j) = true
-	       else (i+1,j+1) match {
-		    case (2,35) => answers2(i)(j) = true
-		    
-		    case (3,28) => answers2(i)(j) = true
-		    
-		    case (4,26) => answers2(i)(j) = true
-		    
-		    
-		    case (6,36) => answers2(i)(j) = true
-		    
-		    case (7,38) => answers2(i)(j) = true
-		    case (7,21) => answers2(i)(j) = true
-		    
-		    case (8,37) => answers2(i)(j) = true
-		    case (8,22) => answers2(i)(j) = true
-		    
-		    case (9,17) => answers2(i)(j) = true
-		    case (9,34) => answers2(i)(j) = true
-		    
-		    case (10,33) => answers2(i)(j) = true
-		    case (10,18) => answers2(i)(j) = true
-		    
-		    case (11,23) => answers2(i)(j) = true
-		    case (11,32) => answers2(i)(j) = true
-		    
-		    case (12,31) => answers2(i)(j) = true
-		    case (12,24) => answers2(i)(j) = true
-		    
-		    case (13,25) => answers2(i)(j) = true
-		    
-		    case (14,27) => answers2(i)(j) = true
-		    
-		    case (15,30) => answers2(i)(j) = true
-		    case (15,19) => answers2(i)(j) = true
-		    
-		    case (16,20) => answers2(i)(j) = true
-		    case (16,29) => answers2(i)(j) = true
-		    
-		    case (17,9) => answers2(i)(j) = true
-		    case (17,34) => answers2(i)(j) = true
-		    
-		    case (18,10) => answers2(i)(j) = true
-		    case (18,33) => answers2(i)(j) = true
-		    
-		    case (19,15) => answers2(i)(j) = true
-		    case (19,30) => answers2(i)(j) = true
-		    
-		    case (20,16) => answers2(i)(j) = true
-		    case (20,29) => answers2(i)(j) = true
-		    
-		    case (21,7) => answers2(i)(j) = true
-		    case (21,38) => answers2(i)(j) = true
-		    
-		    case (22,8) => answers2(i)(j) = true
-		    case (22,37) => answers2(i)(j) = true
-		    
-		    case (23,11) => answers2(i)(j) = true
-		    case (23,32) => answers2(i)(j) = true
-		    
-		    case (24,12) => answers2(i)(j) = true
-		    case (24,31) => answers2(i)(j) = true
-		    
-		    case (25,13) => answers2(i)(j) = true
-		    
-		    case (26,4) => answers2(i)(j) = true
-		    
-		    case (27,14) => answers2(i)(j) = true
-		    
-		    case (28,3) => answers2(i)(j) = true
-		    
-		    case (29,16) => answers2(i)(j) = true
-		    case (29,20) => answers2(i)(j) = true
-		    
- 		    case (30,15) => answers2(i)(j) = true
-		    case (30,19) => answers2(i)(j) = true
-		    
-		    case (31,12) => answers2(i)(j) = true
-		    case (31,24) => answers2(i)(j) = true
-		    
-		    case (32,11) => answers2(i)(j) = true
-		    case (32,23) => answers2(i)(j) = true
-		    
-		    case (33,10) => answers2(i)(j) = true
-		    case (33,18) => answers2(i)(j) = true
-		    
-		    case (34,9) => answers2(i)(j) = true
-		    case (34,17) => answers2(i)(j) = true
-		    
-		    case (35,2) => answers2(i)(j) = true
-		    
-		    case (36,6) => answers2(i)(j) = true
-		    
-		    case (37,8) => answers2(i)(j) = true
-		    
-		    case (38,7) => answers2(i)(j) = true
-		    case (38,21) => answers2(i)(j) = true
-		    
-		    case _ => answers2(i)(j) = false
-	       } // match	  
-	   }
-       }
-             
+	            if (DEBUG) println(s"j: $j")
+	            if ( i == j ) answers2(i)(j) = true
+	            else (i+1,j+1) match {
+		               case (2,35) => answers2(i)(j) = true
+
+		               case (3,28) => answers2(i)(j) = true
+
+		               case (4,26) => answers2(i)(j) = true
+
+
+		               case (6,36) => answers2(i)(j) = true
+
+		               case (7,38) => answers2(i)(j) = true
+		               case (7,21) => answers2(i)(j) = true
+
+		               case (8,37) => answers2(i)(j) = true
+		               case (8,22) => answers2(i)(j) = true
+
+		               case (9,17) => answers2(i)(j) = true
+		               case (9,34) => answers2(i)(j) = true
+
+		               case (10,33) => answers2(i)(j) = true
+		               case (10,18) => answers2(i)(j) = true
+
+		               case (11,23) => answers2(i)(j) = true
+		               case (11,32) => answers2(i)(j) = true
+
+		               case (12,31) => answers2(i)(j) = true
+		               case (12,24) => answers2(i)(j) = true
+
+		               case (13,25) => answers2(i)(j) = true
+
+		               case (14,27) => answers2(i)(j) = true
+
+		               case (15,30) => answers2(i)(j) = true
+		               case (15,19) => answers2(i)(j) = true
+
+		               case (16,20) => answers2(i)(j) = true
+		               case (16,29) => answers2(i)(j) = true
+
+		               case (17,9) => answers2(i)(j) = true
+		               case (17,34) => answers2(i)(j) = true
+
+		               case (18,10) => answers2(i)(j) = true
+		               case (18,33) => answers2(i)(j) = true
+
+		               case (19,15) => answers2(i)(j) = true
+		               case (19,30) => answers2(i)(j) = true
+
+		               case (20,16) => answers2(i)(j) = true
+		               case (20,29) => answers2(i)(j) = true
+
+		               case (21,7) => answers2(i)(j) = true
+		               case (21,38) => answers2(i)(j) = true
+
+		               case (22,8) => answers2(i)(j) = true
+		               case (22,37) => answers2(i)(j) = true
+
+		               case (23,11) => answers2(i)(j) = true
+		               case (23,32) => answers2(i)(j) = true
+
+		               case (24,12) => answers2(i)(j) = true
+		               case (24,31) => answers2(i)(j) = true
+
+		               case (25,13) => answers2(i)(j) = true
+
+		               case (26,4) => answers2(i)(j) = true
+
+		               case (27,14) => answers2(i)(j) = true
+
+		               case (28,3) => answers2(i)(j) = true
+
+		               case (29,16) => answers2(i)(j) = true
+		               case (29,20) => answers2(i)(j) = true
+
+ 		               case (30,15) => answers2(i)(j) = true
+		               case (30,19) => answers2(i)(j) = true
+
+		               case (31,12) => answers2(i)(j) = true
+		               case (31,24) => answers2(i)(j) = true
+
+		               case (32,11) => answers2(i)(j) = true
+		               case (32,23) => answers2(i)(j) = true
+
+		               case (33,10) => answers2(i)(j) = true
+		               case (33,18) => answers2(i)(j) = true
+
+		               case (34,9) => answers2(i)(j) = true
+		               case (34,17) => answers2(i)(j) = true
+
+		               case (35,2) => answers2(i)(j) = true
+
+		               case (36,6) => answers2(i)(j) = true
+
+		               case (37,8) => answers2(i)(j) = true
+
+		               case (38,7) => answers2(i)(j) = true
+		               case (38,21) => answers2(i)(j) = true
+
+		               case _ => answers2(i)(j) = false
+	            } // match
+	         } // for j
+       } // for i
+
        for ( i <- 0 until machines.length ) {
        	   val m : DFA = machines(i)
-	   val a : Array[Boolean]= answers(i)
+	         val a : Array[Boolean]= answers(i)
        	   testSuiteAcceptance(m,strings,a)
        } // for
 
-       testSuiteEquality(machines,answers2)       
+       testSuiteEquality(machines,answers2)
 }
