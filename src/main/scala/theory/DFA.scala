@@ -26,7 +26,6 @@ class DFA() extends FiniteAutomaton
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     private val DEBUG    = false
-
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     /*		The private instance variables		   */		// TODO : make start and name a val
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -34,7 +33,7 @@ class DFA() extends FiniteAutomaton
     private val alphabet = Set[Symbl]()
     private val delta    = Map[(State,Symbl),State]()
     private var start    = ""
-    private val ac  cept   = Set[State]()
+    private val accept   = Set[State]()
     private var name 	   = "M"
     private var valid    = true
     private var state    = start
@@ -189,32 +188,29 @@ class DFA() extends FiniteAutomaton
 
 	    val start1 = this.getStartState()
 	    val start2 = m2.getStartState()
-	    val start  = start1+","+start2
+	    val start  = s"(${start1},${start2})"
 
 	    val name1 = this.getName()
 	    val name2 = m2.getName()
 	    val name  = name1+"_UNION_"+name2
 
+      val unchecked = Stack((start1,start2))
       states += start
 
-      val unchecked = Stack((start1,start2))
-      val checked = Set[state]()
-
-      while( ! unchecked.isEmpty() ) {
-        (check1,check2) = unchecked.pop()
-        newFrom = check1+","+check2
-        checked += newFrom
+      while( ! unchecked.isEmpty ) {
+        val (check1,check2) = unchecked.pop()
+        val newFrom = s"(${check1},${check2})"
+        if ( (accept1 contains check1) || (accept2 contains check2)){
+          accept += newFrom
+        }
         for ( symbl <- alphabet ) {
-          (new1,new2) = (delta1(check1,symbl),delta2(check2,symbl))
-          newInput = (newFrom,symbl)
-          newTo = new1+","+new2
-          delta += (newFrom -> newTo)
-          if ( ! checked contains (new1,new2) ) {
-            unchecked += (new1,new2)
-            states += newTo
-            if ( (accept1 contains new1) || (accept2 contains new2) ) {
-              accept += newTo
-            } // if
+          val (new1,new2) = (delta1(check1,symbl),delta2(check2,symbl))
+          val newInput = (newFrom,symbl)
+          val newTo = s"(${new1},${new2})"
+          delta += (newInput -> newTo)
+          if ( !(states contains newTo) ){
+              states += newTo
+              unchecked.push((new1,new2))
           } // if
         } //  for symbol
       } // while
@@ -244,7 +240,7 @@ class DFA() extends FiniteAutomaton
 
 	    val start1 = this.getStartState()
 	    val start2 = m2.getStartState()
-	    val start  = start1+","+start2
+	    val start  = s"(${start1},${start2})"
 
 	    val delta1 = this.delta // this.map
 	    val delta2 = m2.delta // m2.map
@@ -258,25 +254,24 @@ class DFA() extends FiniteAutomaton
 	    val name2 = m2.getName()
 	    val name  = name1+"_INTERSECT_"+name2
 
-      states += start
       val unchecked = Stack((start1,start2))
-      val checked = Set[state]()
 
-      while( ! unchecked.isEmpty() ) {
-        (check1,check2) = unchecked.pop()
-        newFrom = check1+","+check2
-        checked += newFrom
+      states += start
+
+      while( ! unchecked.isEmpty ) {
+        val (check1,check2) = unchecked.pop()
+        val newFrom = s"(${check1},${check2})"
+        if ( (accept1 contains check1) && (accept2 contains check2) ){
+          accept += newFrom
+        } // if
         for ( symbl <- alphabet ) {
-          (new1,new2) = (delta1(check1,symbl),delta2(check2,symbl))
-          newInput = (newFrom,symbl)
-          newTo = new1+","+new2
-          delta += (newFrom -> newTo)
-          if ( ! checked contains (new1,new2) ) {
-            unchecked += (new1,new2)
+          val (new1,new2) = (delta1(check1,symbl),delta2(check2,symbl))
+          val newInput = (newFrom,symbl)
+          val newTo = s"(${new1},${new2})"
+          delta += (newInput -> newTo)
+          if ( !(states contains newTo) ) {
+            unchecked.push((new1,new2))
             states += newTo
-            if ( (accept1 contains new1) || (accept2 contains new2) ) {
-              accept += newTo
-            } // if
           } // if
         } //  for symbol
       } // while
@@ -596,7 +591,6 @@ object DFATester extends App{
 
        val m1  = new DFA(states1,sigma1,delta1,start1,accept1,"M1")				// M1 accepts all even length strings
        val m2  = new DFA(states2,sigma2,delta2,start2,accept2,"M2")				// M2 accepts all strings with even 1s
-
        val m3  = new DFA(states3,sigma3,delta3,start3,accept3,"M3")				// M3 accepts all strings with even 0s
        val m4  = new DFA(states4,sigma4,delta4,start4,accept4,"M4")				// M4 accepts strings with odd 0s
        val m5  = new DFA(states5,sigma5,delta5,start5,accept5,"M5")				// M5 accepts no strings
