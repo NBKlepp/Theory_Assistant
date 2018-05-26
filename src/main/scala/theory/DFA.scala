@@ -8,7 +8,7 @@
 package theory
 
 import scala.collection.mutable.{Set,Map,Stack}
-//import scala.collection.immutable.Map
+import util.control.Breaks._
 import TypeDefs._
 
 class DFA() extends FiniteAutomaton
@@ -26,6 +26,7 @@ class DFA() extends FiniteAutomaton
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     private val DEBUG    = false
+    private val DEBUGG   = true
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     /*		The private instance variables		   */		// TODO : make start and name a val
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -46,7 +47,7 @@ class DFA() extends FiniteAutomaton
     {
   	  this()
   	  if (DEBUG) println(s"Making new machine: $name")
-      this.name = name
+      //this.name = name
     	this.states   ++= (states union Set(NullState))
   	  this.alphabet ++= alphabet
   	  setDelta( delta )
@@ -275,24 +276,6 @@ class DFA() extends FiniteAutomaton
           } // if
         } //  for symbol
       } // while
-
-      /*
-	    for( state <- this.states ){
-	         for ( state2 <- m2.getStates() ){
-	            if (DEBUG) println(s"working on combination state ($state,$state2)")
-	         	  val newFrom = state+","+state2
-	    	      if (DEBUG) println(s"New state adding is: is $newFrom")
-	         	  states += newFrom
-	         	  if ( (accept1 contains state) && (accept2 contains state2) ) accept += newFrom
-	         	  for ( symbl <- alphabet ) {
-	    	          if (DEBUG) println(s"Working on symbol $symbl via ($state,$symbl) and ($state2,$symbl)")
-	    	          val newInput = (newFrom,symbl)
-	    	          val newTo   = delta1(state,symbl)+","+delta2(state2,symbl)
-    		          delta += (newInput -> newTo) //(((newFrom,symbl),newTo))
-	    	      } // for symbl
-	         } // for m2.states
-	    } // for this.states
-      */
 	    new DFA(states, alphabet, delta, start, accept, name)
     } // intersect
 
@@ -340,6 +323,62 @@ class DFA() extends FiniteAutomaton
 
     def equals(m2 : NFA) : Boolean = equals(m2.DFAify())
 
+    def minimize() : DFA =
+    {
+      if (DEBUGG) {
+        println(s"Minimizing : \n${this}")
+        println(s"this.delta_ONE_: \n${this.delta}")
+      }
+      //Reduce the machine to its reachable states
+      val rreachable = reachable()
+      if (DEBUGG) println(s"rreachable: \n${rreachable}")
+      //Differentiate the reachable states
+      val (differentiated,stateFromInt) = rreachable.differentiate()
+      if (DEBUGG) {
+        println(s"differentiated: \n${differentiated.deep}")
+        println(s"stateFromInt: \n${stateFromInt}")
+        println(s"this.delta_TWO_: \n${this.delta}")
+      }
+      //Merge states which aren't differntiable
+      val merge_sets = merge_states(differentiated,stateFromInt)
+      if (DEBUGG) println(s"merge_sets: \n${merge_sets}")
+      //Get the set of states and their associations with the merge_sets
+      val (states, associate) = associate_merge_sets(merge_sets)
+      //set up the remaining data structures to return the new minimal machine
+      if (DEBUGG) println(s"states: \n${states}\nassociate: \n${associate}")
+
+      val delta  = Map[(State,Symbl),State]()
+      val accept = Set[State]()
+      val start  = getNewState(this.start,associate)
+
+      //Now we opulate the above data structures
+      for (state <- this.states){
+        if(DEBUGG) println(s"state: \n${state}")
+        //Find the new "merge state" this state is associated with
+        val newState = getNewState(state,associate)
+        if(DEBUGG) println(s"newState: ${newState}")
+        //We only need to work if we haven't handled the merge state yet
+        if ( delta.
+             keys.
+             map(x => x._1).
+             filter(x => x == newState).
+             toList.
+             length == 0 ){
+          for (a <- alphabet){
+             //Use the old transition function to update the new one
+             if (DEBUGG) println(s"this.delta_THREE: \n${this.delta}")
+             val sstate = this.delta((state,a))
+             val nnewState = getNewState(sstate,associate)
+             delta += (newState,a)->nnewState
+             //handle new accept states
+             if (this.accept contains state) accept += newState
+          } // for a
+        } // if
+      } // for state
+      //new DFA(states, alphabet, delta, start, accept, name)
+      return new DFA(states,alphabet,delta,start,accept,name+"MIN")
+    } // minimize
+
     override def toString() : String =
     {
 	     s"$name\n"                          +
@@ -353,7 +392,215 @@ class DFA() extends FiniteAutomaton
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     // Additional private methods for the class DFA
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    private def associate_merge_sets(merge_sets : Set[Set[State]]) :
+                                            (Set[State],Map[Set[State],State]) =
+    {
+      val states    = Set[State]()
+      val associate = Map[Set[State],State]()
+      //Create new states and add it to the new set of states from the merge sets
+      for (set <- merge_sets){
+        val q = set.mkString("_")
+        states += q
+        associate += set -> q
+      } // for set
 
+      return (states,associate)
+    }
+
+    private def getNewState(state     : State,
+                            associate : Map[Set[State],State]) : State =
+    {
+      var ret = ""
+      breakable{for (set <- associate.keys){
+        if (set contains state){
+           ret = associate(set)
+           break
+        }
+      }} // for
+      return ret
+    } // getNewState
+
+    private def merge_states(differentiated : Array[Array[Boolean]],
+                             stateFromInt   : Map[Int,State]) : Set[Set[State]] =
+    {
+      val merge_sets = Set[Set[State]]()
+      val unmerged = states.clone
+      for (i <- 0 until differentiated.length-1){
+        for (j <- i+1 until differentiated(i).length){
+          if (! differentiated(i)(j) ){
+            val si = stateFromInt(i)
+            val sj = stateFromInt(j)
+            unmerged -= si
+            unmerged -= sj
+            breakable{for ( set <- merge_sets ){
+              if ( (set contains si) || (set contains sj) ){
+                set += si
+                set += sj
+                break
+              } // if
+            }} // For
+            // if we get here then there wasn't a merge set with either si or sj
+            merge_sets += Set(si,sj)
+          } // if
+        } // for i
+      } // for j
+      //We'll add the singleton sets for any states that weren't part of a merge
+      for ( s <- unmerged ) merge_sets += Set(s)
+      return merge_sets
+    } // merge_states
+
+    private def differentiate() : (Array[Array[Boolean]],Map[Int,State]) =
+    {
+      val last_index = states.size - 1
+      //differentiate the accept from the non-accept states
+      val (differentiated,
+           stateFromInt  ,
+           intFromState  ,
+           dependent ) = init_differentiate()
+
+      if (DEBUGG) {
+        println("After init_differentiate")
+        println(s"differentiated: \n${differentiated.deep}")
+        println(s"stateFromInt: \n${stateFromInt}")
+        println(s"intFromState: \n${intFromState}")
+      } // if DEBUGG
+      //Differentiate everything else possible
+      breakable{for ( i <- 0 until last_index){
+        for (j <- i+1 to last_index){
+          val s1 = stateFromInt(i)
+          val s2 = stateFromInt(j)
+          //We'll use this to populate the dependent table later
+          val future = Set[(Int,Int)]()
+          //Check to see if the two states are differentiated by any character
+          for ( a <- alphabet ) {
+            val r1 = delta((s1,a))
+            val r2 = delta((s2,a))
+            /*
+            The states are definitely not differentiated by this symbol if they
+            each transition to the same state or if they each transition back to
+            themvselves (or a mirror image of themselves)
+            */
+            if ( (r1 != r2) && ( (r1,r2) != (s1,s2) ) && ( (r2,r2) != (s1,s2) )) {
+              val rr1 = if (intFromState(r2)>intFromState(r1)) intFromState(r1)
+                        else intFromState(r2)
+              val rr2 = if (rr1 == intFromState(r1)) intFromState(r2)
+                        else intFromState(r1)
+              if (differentiated(rr1)(rr2)) {
+                differentiate2(i,j,differentiated,dependent)
+                break
+              } // if
+              else future += ( (rr1,rr2) )
+            } // if
+          } // for a
+          for ( (p1,p2) <- future ) dependent(p1)(p2)  += ( (i,j) )
+        } // for j
+      } // for i
+      } // breakable
+      return (differentiated,stateFromInt)
+    } // differentiate
+
+    private def init_differentiate() : (Array[Array [Boolean]],
+                                        Map[Int, State],
+                                        Map[State, Int],
+                                        Array[Array[Set[(Int,Int)]]]
+                                       ) =
+    {
+      val dependent = Array.ofDim[Set[(Int,Int)]](states.size,states.size)
+      //initialize the dependent array
+      for (i <- 0 until states.size){
+        for (j <- 0 until states.size){
+          dependent(i)(j) = Set[(Int,Int)]()
+        }
+      }
+      val differentiated = Array.ofDim[Boolean](states.size,states.size)
+      //We'll use these to reference from states to indices and vice versa
+      val stateFromInt = states.
+                         toList.
+                         zipWithIndex.
+                         map( x => (x._2,x._1) ).
+                         toMap
+
+      val intFromState = states.
+                         toList.
+                         zipWithIndex.
+                         toMap
+      //This makes mutable maps from the immutable ones above
+      val sstateFromInt = Map(stateFromInt.toSeq: _*)
+      val iintFromState = Map(intFromState.toSeq: _*)
+
+      if (DEBUGG){
+        println("in init_differentiate")
+        println(s"stateFromInt: \n${stateFromInt}")
+        println(s"intFromState: \n${intFromState}")
+        println(s"sstateFromInt: \n${sstateFromInt}")
+        println(s"iintFromState: \n${iintFromState}")
+      }
+      val last_index = differentiated.length - 1
+      for (i <- 0 until last_index){
+        for (j <- i+1 to last_index){
+          val s1 = stateFromInt(i)
+          val s2 = stateFromInt(j)
+          if ( init_diff_helper(s1,s2) ) differentiated(i)(j) = true
+        } // for j
+      } // for i
+      return (differentiated, sstateFromInt, iintFromState, dependent)
+    } // init_differentiate
+
+    private def init_diff_helper(s1 : State , s2 : State) : Boolean =
+    {
+      val one = (this.accept contains s1) && !(this.accept contains s2)
+      val two = (this.accept contains s2) && !(this.accept contains s1)
+      return one || two
+    } // init_diff_helper
+
+    private def differentiate2(
+                       i              : Int,
+                       j              : Int,
+                       differentiated : Array[Array[Boolean]],
+                       dependent      : Array[Array[Set[(Int,Int)]]]) : Unit =
+    {
+      differentiated(i)(j) = true
+      for ( (p1,p2) <- dependent(i)(j) ) {
+         differentiate2(p1,p2,differentiated,dependent)
+      } // for
+
+    } // differentiate2
+
+    private def reachable() : DFA =
+    {
+
+          val start = this.start
+
+          val notChecked = Stack(start)
+          val states     = Set[State]()
+          val accept     = Set[State]()
+
+          while ( ! (notChecked.isEmpty) ){
+              val state = notChecked.pop()
+              if (DEBUGG) (println(s"Found: ${state}"))
+              states += state
+              if (this.accept contains state) accept += state
+              for (a <- this.alphabet){
+                val newState = delta((state,a))
+                if (DEBUGG) println(s"Might find: ${newState} because of ${a}")
+                if (! (states contains newState) ){
+                  notChecked.push(newState)
+                  if (DEBUGG) println(s"Will find: ${newState}")
+                } // if
+              } // for
+          } // while
+          if(DEBUGG){
+             println(s"states: \n${states}\nthis.states: \n${this.state}")
+             println(s"states == this.states: ${states == this.states}")
+          }
+          if (states == this.states) return this
+          else return new DFA(states,
+                              alphabet,
+                              this.delta.retain((k,v)=> states contains k._1),
+                              start,
+                              accept,
+                              this.name + "_REACH")
+    }
     private def validTransition( transition : ((State,Symbl),State) ) : Boolean =
     {
       if (DEBUG) println(s"validating transition: $transition")
@@ -511,7 +758,7 @@ object DFATester extends App{
        val sigma5  = Set("0","1")
        val delta5  = mapFromSet(Set( (("0","0"),"1"),(("0","1"),"0"),(("1","0"),"0"),(("1","1"),"1") ))
        val start5  = "0"
-       val accept5 = Set("")
+       val accept5 = Set[State]()
 
        val states6 = Set("0","1","2","3")									//Substring 001
        val sigma6  = Set("0","1")
@@ -628,6 +875,11 @@ object DFATester extends App{
        val m36 = m14.complement()
        val m37 = m15.complement()
        val m38 = m16.complement()
+
+       val m39 = m2.union(m13)
+       val m40 = m39.minimize()
+
+       println(s"****************M40******************\n${m40}")
 
        val strings = Array("","11111","111111","10101","101010","110011","001100","01100","10011")
 
@@ -794,4 +1046,6 @@ object DFATester extends App{
        } // for
 
        testSuiteEquality(machines,answers2)
+
+
 }
