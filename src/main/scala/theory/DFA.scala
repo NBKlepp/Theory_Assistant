@@ -7,7 +7,7 @@
 
 package theory
 
-import scala.collection.mutable.{Set,Map,Stack}
+import scala.collection.mutable.{Set,Map,Stack,ArrayBuffer}
 import util.control.Breaks._
 import TypeDefs._
 
@@ -27,6 +27,7 @@ class DFA() extends FiniteAutomaton
 
     private val DEBUG    = false
     private val DEBUGG   = true
+    private val DEBUGGG  = false
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     /*		The private instance variables		   */		// TODO : make start and name a val
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -43,12 +44,11 @@ class DFA() extends FiniteAutomaton
               alphabet : Set[Symbl],
               delta    : Map[(State,Symbl),State],
               start    : State,
-              accept   : Set[State], name : String )
+              accept   : Set[State])
     {
   	  this()
   	  if (DEBUG) println(s"Making new machine: $name")
-      //this.name = name
-    	this.states   ++= (states union Set(NullState))
+    	this.states   ++= states
   	  this.alphabet ++= alphabet
   	  setDelta( delta )
   	  setStart( start )
@@ -59,44 +59,29 @@ class DFA() extends FiniteAutomaton
 
     def this( states   : Set[State],
               alphabet : Set[Symbl],
-              delta    : Set[((State,Symbl),Set[State])],
+              delta    : Map[(State,Symbl),State],
               start    : State,
               accept   : Set[State],
               name     : String )
     {
       this()
-  	  val newDelta = Map[(State,Symbl),State]()
-  	  for ( d <- delta ) {
-  	      if ( d._2.size > 1 ){
-  	      	 println(s"Error in constructor for $name specifying transition function for transition $d : too many states in the output.")
-  	      	 valid = false
-  	      } // if
-  	      else newDelta += d._1 -> d._2.toArray.head
-  	  } // for
-  	  if (valid) {
-  	     if (DEBUG) println(s"Making new machine: $name")
-         this.name = name
-    	   this.states   ++= (states union Set(NullState))
-  	     this.alphabet ++= alphabet
-  	     setDelta( newDelta )
-  	     setStart( start )
-  	     setAccept( accept )
-  	     this.state = start
-  	     if (DEBUG) println(s"new machine ${toString()}")
-  	  } // if
+      if (DEBUG) println(s"Making new machine: $name")
+      this.states   ++= states
+      this.alphabet ++= alphabet
+      setDelta( delta )
+      setStart( start )
+      setAccept( accept )
+      this.state = start
+      this.name = name
+      if (DEBUG) println(s"new machine ${toString()}")
     } // this
 
-
-    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** The Mutator methods for the private instance variables
-     */
-    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
+    /**********************************************************
+     * The Mutator methods for the private instance variables *
+     **********************************************************/
 
     private def setDelta(delta : Map[(State,Symbl),State]) = // : Map[(State,Symbl),State] =
     {
-      if (DEBUG) println(s"Setting delta for $name.")
-
       for ( transition <- delta if validTransition(transition) )  {
         this.delta += (transition._1 -> transition._2)
 	    } // for transition
@@ -104,11 +89,12 @@ class DFA() extends FiniteAutomaton
 	    for ( symbl <- alphabet ) {								//Fill out the unspecified transitions.
 	        for ( state <- states ) {
 	    	    val input = (state,symbl)
-	    	    if ( !( delta contains input) ) this.delta += input -> NullState
+	    	    if ( !( delta contains input) ) {
+              this.states += NullState
+              this.delta += input -> NullState
+            }
 	        } // for state
 	    } // for symbl
-
-	    if (DEBUG) println(s"Delta after setting: ${this.delta}")
     } // setDelta
 
     private def setStart( start : State ){
@@ -120,9 +106,7 @@ class DFA() extends FiniteAutomaton
     } // setStart()
 
     private def setAccept(accept : Set[State]) {
-      if (DEBUG) println(s"Setting accept states with $accept")
     	if ( (accept -- this.states).size == 0 ) {
-	       if (DEBUG) println(s"accept after if: $accept")
 	       this.accept ++= accept
 	    } // if
 	    else {
@@ -131,7 +115,6 @@ class DFA() extends FiniteAutomaton
         }
 		    valid = false
 	    } // else
-	    if (DEBUG) println(s"this.accept: ${this.accept}")
     } // setAccept
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -160,19 +143,30 @@ class DFA() extends FiniteAutomaton
     {
       for ( s <- string ) {
 	       val input = (state,s.toString)
-	       if (DEBUG) println(s"reading input: $input from state: $state")
 	       state = delta(input)
-	       if (DEBUG) println(s"new state: $state")
 	    } // for
 	    val finalState = state
 	    state = start
 	    return accept contains finalState
     } // compute
 
+    def compute_record(string: String) : (Boolean,ArrayBuffer[State]) =
+    {
+      val history = ArrayBuffer(start)
+      for ( s <- string ) {
+	       val input = (state,s.toString)
+	       state = delta(input)
+         history += state
+	    } // for
+	    val finalState = state
+	    state = start
+      return ((accept contains finalState),history)
+    }
+
     def complement() : DFA =
     {
     	val accept = states -- this.accept
-      new DFA(states,alphabet,delta,start,accept,s"${name}_COMP")
+      new DFA(states,alphabet,delta,start,accept,this.name+"_COMP")
     }
 
     def union(m2 : DFA) : DFA =
@@ -215,20 +209,7 @@ class DFA() extends FiniteAutomaton
           } // if
         } //  for symbol
       } // while
-      /*
-	    for( state <- this.states ){
-	         for ( state2 <- m2.getStates() ){
-	         	 val newFrom = state+","+state2
-	         	 states += newFrom
-	         	 if ( (accept1 contains state) || (accept2 contains state2) ) accept += newFrom
-	         	 for ( symbl <- alphabet ) {
-	    	         val newInput = (newFrom,symbl)
-	    	         val newTo   = delta1(state,symbl)+","+delta2(state2,symbl)
-    		          delta +=  ( newInput -> newTo ) //(((newFrom,symbl),newTo))
-	    	     } // for symbl
-	         } // for m2.states
-	    } // for this.states
-      */
+
 	    new DFA(states, alphabet, delta, start, accept, name)
     } // union
 
@@ -325,10 +306,7 @@ class DFA() extends FiniteAutomaton
 
     def minimize() : DFA =
     {
-      if (DEBUGG) {
-        println(s"Minimizing : \n${this}")
-        println(s"this.delta_ONE_: \n${this.delta}")
-      }
+      if (DEBUGG) println(s"Minimizing : \n${this}")
       //Reduce the machine to its reachable states
       val rreachable = reachable()
       if (DEBUGG) println(s"rreachable: \n${rreachable}")
@@ -337,7 +315,6 @@ class DFA() extends FiniteAutomaton
       if (DEBUGG) {
         println(s"differentiated: \n${differentiated.deep}")
         println(s"stateFromInt: \n${stateFromInt}")
-        println(s"this.delta_TWO_: \n${this.delta}")
       }
       //Merge states which aren't differntiable
       val merge_sets = merge_states(differentiated,stateFromInt)
@@ -351,7 +328,7 @@ class DFA() extends FiniteAutomaton
       val accept = Set[State]()
       val start  = getNewState(this.start,associate)
 
-      //Now we opulate the above data structures
+      //Now we populate the above data structures
       for (state <- this.states){
         if(DEBUGG) println(s"state: \n${state}")
         //Find the new "merge state" this state is associated with
@@ -376,12 +353,12 @@ class DFA() extends FiniteAutomaton
         } // if
       } // for state
       //new DFA(states, alphabet, delta, start, accept, name)
-      return new DFA(states,alphabet,delta,start,accept,name+"MIN")
+      return new DFA(states,alphabet,delta,start,accept,name+"_MIN")
     } // minimize
 
     override def toString() : String =
     {
-	     s"$name\n"                          +
+	     s"${this.name}\n"                   +
 	     s"Start: $start\n"                  +
 	     s"Accept: ${setToString(accept)}\n" +
 	     s"Delta: \n$deltaString"
@@ -463,36 +440,55 @@ class DFA() extends FiniteAutomaton
         println(s"differentiated: \n${differentiated.deep}")
         println(s"stateFromInt: \n${stateFromInt}")
         println(s"intFromState: \n${intFromState}")
+        println(s"last_index: ${last_index}")
       } // if DEBUGG
       //Differentiate everything else possible
-      breakable{for ( i <- 0 until last_index){
+      for ( i <- 0 until last_index){
         for (j <- i+1 to last_index){
-          val s1 = stateFromInt(i)
-          val s2 = stateFromInt(j)
-          //We'll use this to populate the dependent table later
-          val future = Set[(Int,Int)]()
-          //Check to see if the two states are differentiated by any character
-          for ( a <- alphabet ) {
-            val r1 = delta((s1,a))
-            val r2 = delta((s2,a))
-            /*
-            The states are definitely not differentiated by this symbol if they
-            each transition to the same state or if they each transition back to
-            themvselves (or a mirror image of themselves)
-            */
-            if ( (r1 != r2) && ( (r1,r2) != (s1,s2) ) && ( (r2,r2) != (s1,s2) )) {
-              val rr1 = if (intFromState(r2)>intFromState(r1)) intFromState(r1)
-                        else intFromState(r2)
-              val rr2 = if (rr1 == intFromState(r1)) intFromState(r2)
-                        else intFromState(r1)
-              if (differentiated(rr1)(rr2)) {
-                differentiate2(i,j,differentiated,dependent)
-                break
+          if (DEBUGG) println(s"Checking differentation for ($i,$j)")
+          //We only need to try to differentiate a cell if it's not yet differentiated
+          if (! (differentiated(i)(j))){
+            val s1 = stateFromInt(i)
+            val s2 = stateFromInt(j)
+            //We'll use this to populate the dependent table later
+            val future = Set[(Int,Int)]()
+            //Check to see if the two states are differentiated by any character
+            breakable{for ( a <- alphabet ) {
+              val r1 = delta((s1,a))
+              val r2 = delta((s2,a))
+              if (DEBUGG){
+                 println(s"Checking $a for differentiating ($i,$j)")
+                 println(s"$a led to ${r1},${r2}")
+              }
+              /*
+              The states are definitely not differentiated by this symbol if they
+              each transition to the same state or if they each transition back to
+              themvselves (or a mirror image of themselves)
+              */
+              if ( (r1 != r2) && ( Set(r1,r2) != Set(s1,s2) ) ) {
+                val rr1 = if (intFromState(r2)>intFromState(r1)) intFromState(r1)
+                          else intFromState(r2)
+                val rr2 = if (rr1 == intFromState(r1)) intFromState(r2)
+                          else intFromState(r1)
+                if (DEBUGG) {
+                  println(s"Need to check differentiation:\nr's: \n${Set(r1,r2)},\ns's: \n${Set(s1,s2)}")
+                  println(s"rr1: ${rr1}, rr2: ${rr2}")
+                  println(s"differentiated(${rr1})(${rr2}): ${differentiated(rr1)(rr2)}")
+                }
+                if (differentiated(rr1)(rr2)) {
+                  if (DEBUGG) println(s"differentiating $i,$j")
+                  differentiate2(i,j,differentiated,dependent)
+                  break
+                } // if
+                else future += ( (rr1,rr2) )
               } // if
-              else future += ( (rr1,rr2) )
-            } // if
-          } // for a
-          for ( (p1,p2) <- future ) dependent(p1)(p2)  += ( (i,j) )
+            } // for a
+            for ( (p1,p2) <- future ) {
+              dependent(p1)(p2)  += ( (i,j) )
+              if (DEBUGG) println(s"Updated dependent($p1)($p2): ${dependent(p1)(p2)}")
+            }
+            if (DEBUGG) println(s"After updating dependent: ${dependent.deep}")
+          } // if
         } // for j
       } // for i
       } // breakable
@@ -559,9 +555,13 @@ class DFA() extends FiniteAutomaton
                        differentiated : Array[Array[Boolean]],
                        dependent      : Array[Array[Set[(Int,Int)]]]) : Unit =
     {
+      if (DEBUGG) {
+        println(s"Differentiating $i,$j")
+        println(s"dependent(i)(j): ${dependent(i)(j)}")
+      }
       differentiated(i)(j) = true
       for ( (p1,p2) <- dependent(i)(j) ) {
-         differentiate2(p1,p2,differentiated,dependent)
+        differentiate2(p1,p2,differentiated,dependent)
       } // for
 
     } // differentiate2
@@ -590,7 +590,7 @@ class DFA() extends FiniteAutomaton
               } // for
           } // while
           if(DEBUGG){
-             println(s"states: \n${states}\nthis.states: \n${this.state}")
+             println(s"states: \n${states}\nthis.states: \n${this.states}")
              println(s"states == this.states: ${states == this.states}")
           }
           if (states == this.states) return this
@@ -716,6 +716,17 @@ object DFATestMethods{
 	         } // for
 	         if (pass) println(s"Acceptance suite passed for ${machine.getName()}")
        } // testSuiteEquality
+
+       def testSuitMinizeSoft(ar1 : Array[DFA], ar2 : Array[DFA]){
+         var pass = true
+         for (i <- 0 until ar1.length){
+           if (! ar1(i).equals(ar2(i)) ){
+             pass = false
+             println(s"Test failed for minimization. \nm1: \n${ar1(i)}\nm2: \n${ar2(i)}")
+           }
+         } // for i
+         if (pass) println(s"Soft test for minimization passed.")
+       }
 } // DFATestMethods
 
 object DFATester extends App{
@@ -724,7 +735,9 @@ object DFATester extends App{
 
        val DEBUG = false
 
-       def mapFromSet( set : Set[((State,Symbl),State)] ) : Map[(State,Symbl),State] = {
+       def mapFromSet( set : Set[((State,Symbl),State)] )
+                                            : Map[(State,Symbl),State] =
+       {
        	   val map = Map[(State,Symbl),State]()
        	   for ( input <- set ) map += (input._1 -> input._2)
 	         map
@@ -732,107 +745,185 @@ object DFATester extends App{
 
        val states1 = Set("0","1")										//All even length strings
        val sigma1  = Set("0","1")
-       val delta1  = mapFromSet(Set( (("0","0"),"1"),(("0","1"),"1"),(("1","0"),"0"),(("1","1"),"0") ))
+       val delta1  = mapFromSet(Set( (("0","0"),"1"),
+                                     (("0","1"),"1"),
+                                     (("1","0"),"0"),
+                                     (("1","1"),"0") ))
        val start1  = "0"
        val accept1 = Set("0")
 
        val states2 = Set("0","1")										//Even number of 1s
        val sigma2  = Set("0","1")
-       val delta2  = mapFromSet(Set( (("0","0"),"0"),(("0","1"),"1"),(("1","0"),"1"),(("1","1"),"0") ))
+       val delta2  = mapFromSet(Set( (("0","0"),"0"),
+                                     (("0","1"),"1"),
+                                     (("1","0"),"1"),
+                                     (("1","1"),"0") ))
        val start2  = "0"
        val accept2 = Set("0")
 
        val states3 = Set("0","1")										//Even number of 0s
        val sigma3  = Set("0","1")
-       val delta3  = mapFromSet(Set( (("0","0"),"1"),(("0","1"),"0"),(("1","0"),"0"),(("1","1"),"1") ))
+       val delta3  = mapFromSet(Set( (("0","0"),"1"),
+                                     (("0","1"),"0"),
+                                     (("1","0"),"0"),
+                                     (("1","1"),"1") ))
        val start3  = "0"
        val accept3 = Set("0")
 
        val states4 = Set("0","1")										//Odd number of 0s
        val sigma4  = Set("0","1")
-       val delta4  = mapFromSet(Set( (("0","0"),"1"),(("0","1"),"0"),(("1","0"),"0"),(("1","1"),"1") ))
+       val delta4  = mapFromSet(Set( (("0","0"),"1"),
+                                     (("0","1"),"0"),
+                                     (("1","0"),"0"),
+                                     (("1","1"),"1") ))
        val start4  = "0"
        val accept4 = Set("1")
 
        val states5 = Set("0","1")										//Empty language
        val sigma5  = Set("0","1")
-       val delta5  = mapFromSet(Set( (("0","0"),"1"),(("0","1"),"0"),(("1","0"),"0"),(("1","1"),"1") ))
+       val delta5  = mapFromSet(Set( (("0","0"),"1"),
+                                     (("0","1"),"0"),
+                                     (("1","0"),"0"),
+                                     (("1","1"),"1") ))
        val start5  = "0"
        val accept5 = Set[State]()
 
        val states6 = Set("0","1","2","3")									//Substring 001
        val sigma6  = Set("0","1")
-       val delta6  = mapFromSet(Set( (("0","0"),"1"),(("0","1"),"0"),(("1","0"),"2"), (("1","1"),"0"),
-       	   	     	  (("2","1"),"3") ,(("2","0"),"2") ,(("3","1"),"3"),(("3","0"),"3")))
+       val delta6  = mapFromSet(Set( (("0","0"),"1"),
+                                     (("0","1"),"0"),
+                                     (("1","0"),"2"),
+                                     (("1","1"),"0"),
+       	   	     	                   (("2","1"),"3"),
+                                     (("2","0"),"2"),
+                                     (("3","1"),"3"),
+                                     (("3","0"),"3")))
        val start6  = "0"
        val accept6 = Set("3")
 
        val states7 = Set("00","01","10","11")										//Even 0's AND odd 1's
        val sigma7  = Set("0","1")
-       val delta7  = mapFromSet(Set( (("00","0"),"10"),(("00","1"),"01"),(("10","0"),"00"),(("10","1"),"11"),
-       	   	     	  (("11","1"),"10"),(("11","0"),"01"),(("01","1"),"00"),(("01","0"),"11")  ))
+       val delta7  = mapFromSet(Set( (("00","0"),"10"),
+                                     (("00","1"),"01"),
+                                     (("10","0"),"00"),
+                                     (("10","1"),"11"),
+       	   	     	                   (("11","1"),"10"),
+                                     (("11","0"),"01"),
+                                     (("01","1"),"00"),
+                                     (("01","0"),"11")  ))
        val start7  = "00"
        val accept7 = Set("01")
 
        val states8 = Set("00","01","10","11")										//Even 0's OR odd 1's
        val sigma8  = Set("0","1")
-       val delta8  = mapFromSet(Set( (("00","0"),"10"),(("00","1"),"01"),(("10","0"),"00"),(("10","1"),"11"),
-       	   	     	  (("11","1"),"10"),(("11","0"),"01"),(("01","1"),"00"),(("01","0"),"11")  ))
+       val delta8  = mapFromSet(Set( (("00","0"),"10"),
+                                     (("00","1"),"01"),
+                                     (("10","0"),"00"),
+                                     (("10","1"),"11"),
+       	   	     	                   (("11","1"),"10"),
+                                     (("11","0"),"01"),
+                                     (("01","1"),"00"),
+                                     (("01","0"),"11")  ))
        val start8  = "00"
        val accept8 = Set("00","01","11")
 
        val states9 = Set("00","01","10","11")										//Even 0's AND even 1's
        val sigma9  = Set("0","1")
-       val delta9  = mapFromSet(Set( (("00","0"),"10"),(("00","1"),"01"),(("10","0"),"00"),(("10","1"),"11"),
-       	   	     	  (("11","1"),"10"),(("11","0"),"01"),(("01","1"),"00"),(("01","0"),"11")  ))
+       val delta9  = mapFromSet(Set( (("00","0"),"10"),
+                                     (("00","1"),"01"),
+                                     (("10","0"),"00"),
+                                     (("10","1"),"11"),
+       	   	     	                   (("11","1"),"10"),
+                                     (("11","0"),"01"),
+                                     (("01","1"),"00"),
+                                     (("01","0"),"11")  ))
        val start9  = "00"
        val accept9 = Set("00")
 
        val states10 = Set("00","01","10","11")										//Even 0's OR even 1's
        val sigma10  = Set("0","1")
-       val delta10  = mapFromSet(Set( (("00","0"),"10"),(("00","1"),"01"),(("10","0"),"00"),(("10","1"),"11"),
-       	   	     	  (("11","1"),"10"),(("11","0"),"01"),(("01","1"),"00"),(("01","0"),"11")  ))
+       val delta10  = mapFromSet(Set( (("00","0"),"10"),
+                                      (("00","1"),"01"),
+                                      (("10","0"),"00"),
+                                      (("10","1"),"11"),
+       	   	     	                    (("11","1"),"10"),
+                                      (("11","0"),"01"),
+                                      (("01","1"),"00"),
+                                      (("01","0"),"11")  ))
        val start10  = "00"
        val accept10 = Set("00","01","10")
 
        val states11 = Set("00","01","10","11")										//odd 0's AND odd 1's
        val sigma11  = Set("0","1")
-       val delta11  = mapFromSet(Set( (("00","0"),"10"),(("00","1"),"01"),(("10","0"),"00"),(("10","1"),"11"),
-       	   	     	  (("11","1"),"10"),(("11","0"),"01"),(("01","1"),"00"),(("01","0"),"11")  ))
+       val delta11  = mapFromSet(Set( (("00","0"),"10"),
+                                      (("00","1"),"01"),
+                                      (("10","0"),"00"),
+                                      (("10","1"),"11"),
+       	   	     	                    (("11","1"),"10"),
+                                      (("11","0"),"01"),
+                                      (("01","1"),"00"),
+                                      (("01","0"),"11")))
        val start11  = "00"
        val accept11 = Set("11")
 
        val states12 = Set("00","01","10","11")										//odd 0's OR odd 1's
        val sigma12  = Set("0","1")
-       val delta12  = mapFromSet(Set( (("00","0"),"10"),(("00","1"),"01"),(("10","0"),"00"),(("10","1"),"11"),
-       	   	     	  (("11","1"),"10"),(("11","0"),"01"),(("01","1"),"00"),(("01","0"),"11")  ))
+       val delta12  = mapFromSet(Set( (("00","0"),"10"),
+                                      (("00","1"),"01"),
+                                      (("10","0"),"00"),
+                                      (("10","1"),"11"),
+       	   	     	                    (("11","1"),"10"),
+                                      (("11","0"),"01"),
+                                      (("01","1"),"00"),
+                                      (("01","0"),"11")  ))
        val start12  = "00"
        val accept12 = Set("10","01","11")
 
        val states13 = Set("0","1")										//Odd number of 1s
        val sigma13  = Set("0","1")
-       val delta13  = mapFromSet(Set( (("0","0"),"0"),(("0","1"),"1"),(("1","0"),"1"),(("1","1"),"0") ))
+       val delta13  = mapFromSet(Set( (("0","0"),"0"),
+                                      (("0","1"),"1"),
+                                      (("1","0"),"1"),
+                                      (("1","1"),"0") ))
        val start13  = "0"
        val accept13 = Set("1")
 
        val states14 = Set("0","1","2","3")									//w/o Substring 001
        val sigma14  = Set("0","1")
-       val delta14  = mapFromSet(Set( (("0","0"),"1"),(("0","1"),"0"),(("1","0"),"2"), (("1","1"),"0"),
-       	   	     	  (("2","1"),"3") ,(("2","0"),"2") ,(("3","1"),"3"),(("3","0"),"3")))
+       val delta14  = mapFromSet(Set( (("0","0"),"1"),
+                                      (("0","1"),"0"),
+                                      (("1","0"),"2"),
+                                      (("1","1"),"0"),
+       	   	     	                    (("2","1"),"3"),
+                                      (("2","0"),"2"),
+                                      (("3","1"),"3"),
+                                      (("3","0"),"3")))
        val start14  = "0"
        val accept14 = Set("0","1","2")
 
        val states15 = Set("00","01","10","11")										//odd 0's AND even 1's
        val sigma15  = Set("0","1")
-       val delta15  = mapFromSet(Set( (("00","0"),"10"),(("00","1"),"01"),(("10","0"),"00"),(("10","1"),"11"),
-       	   	     	  (("11","1"),"10"),(("11","0"),"01"),(("01","1"),"00"),(("01","0"),"11")  ))
+       val delta15  = mapFromSet(Set( (("00","0"),"10"),
+                                      (("00","1"),"01"),
+                                      (("10","0"),"00"),
+                                      (("10","1"),"11"),
+       	   	     	                    (("11","1"),"10"),
+                                      (("11","0"),"01"),
+                                      (("01","1"),"00"),
+                                      (("01","0"),"11")  ))
        val start15  = "00"
        val accept15 = Set("10")
 
        val states16 = Set("00","01","10","11")										//odd 0's OR even 1's
        val sigma16  = Set("0","1")
-       val delta16  = mapFromSet(Set( (("00","0"),"10"),(("00","1"),"01"),(("10","0"),"00"),(("10","1"),"11"),
-       	   	     	  (("11","1"),"10"),(("11","0"),"01"),(("01","1"),"00"),(("01","0"),"11")  ))
+       val delta16  = mapFromSet(Set( (("00","0"),"10"),
+                                      (("00","1"),"01"),
+                                      (("10","0"),"00"),
+                                      (("10","1"),"11"),
+       	   	     	                    (("11","1"),"10"),
+                                      (("11","0"),"01"),
+                                      (("01","1"),"00"),
+                                      (("01","0"),"11")  ))
        val start16  = "00"
        val accept16 = Set("10","00","11")
 
@@ -876,10 +967,44 @@ object DFATester extends App{
        val m37 = m15.complement()
        val m38 = m16.complement()
 
-       val m39 = m2.union(m13)
-       val m40 = m39.minimize()
-
-       println(s"****************M40******************\n${m40}")
+       val m1_min = m1.minimize()
+       val m2_min = m2.minimize()
+       val m3_min = m3.minimize()
+       val m4_min = m4.minimize()
+       val m5_min = m5.minimize()
+       val m6_min = m6.minimize()
+       val m7_min = m7.minimize()
+       val m8_min = m8.minimize()
+       val m9_min = m9.minimize()
+       val m10_min = m10.minimize()
+       val m11_min = m11.minimize()
+       val m12_min = m12.minimize()
+       val m13_min = m13.minimize()
+       val m14_min = m14.minimize()
+       val m15_min = m15.minimize()
+       val m16_min = m16.minimize()
+       val m17_min = m17.minimize()
+       val m18_min = m18.minimize()
+       val m19_min = m19.minimize()
+       val m20_min = m20.minimize()
+       val m21_min = m21.minimize()
+       val m22_min = m22.minimize()
+       val m23_min = m23.minimize()
+       val m24_min = m24.minimize()
+       val m25_min = m25.minimize()
+       val m26_min = m26.minimize()
+       val m27_min = m27.minimize()
+       val m28_min = m28.minimize()
+       val m29_min = m29.minimize()
+       val m30_min = m30.minimize()
+       val m31_min = m31.minimize()
+       val m32_min = m32.minimize()
+       val m33_min = m33.minimize()
+       val m34_min = m34.minimize()
+       val m35_min = m35.minimize()
+       val m36_min = m36.minimize()
+       val m37_min = m37.minimize()
+       val m38_min = m38.minimize()
 
        val strings = Array("","11111","111111","10101","101010","110011","001100","01100","10011")
 
@@ -923,10 +1048,23 @@ object DFATester extends App{
        val a37 : Array[Boolean] = a8
        val a38 : Array[Boolean] = a7
 
-       val machines : Array[DFA] = Array(m1 ,m2 ,m3 ,m4 ,m5 ,m6 ,m7 ,m8 ,m9 ,m10,m11,m12,m13,m14,m15,m16,m17,m18,m19,
-					 m20,m21,m22,m23,m24,m25,m26,m27,m28,m29,m30,m31,m32,m33,m34,m35,m36,m37,m38)
-       val answers  = Array(a1 ,a2 ,a3 ,a4 ,a5 ,a6 ,a7 ,a8 ,a9 ,a10,a11,a12,a13,a14,a15,a16,a17,a18,
-			    a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38)
+       val machines : Array[DFA] = Array(m1 ,m2 ,m3 ,m4 ,m5 ,m6 ,m7 ,m8 ,m9 ,m10,
+                                         m11,m12,m13,m14,m15,m16,m17,m18,m19,m20,
+                                         m21,m22,m23,m24,m25,m26,m27,m28,m29,m30,
+                                         m31,m32,m33,m34,m35,m36,m37,m38)
+       val min_machines : Array[DFA] = Array(m1_min ,m2_min ,m3_min ,m4_min ,
+                                             m5_min ,m6_min ,m7_min ,m8_min ,
+                                             m9_min ,m10_min,m11_min,m12_min,
+                                             m13_min,m14_min,m15_min,m16_min,
+                                             m17_min,m18_min,m19_min,m20_min,
+                                             m21_min,m22_min,m23_min,m24_min,
+                                             m25_min,m26_min,m27_min,m28_min,
+                                             m29_min,m30_min,m31_min,m32_min,
+                                             m33_min,m34_min,m35_min,m36_min,
+                                             m37_min,m38_min)
+       val answers  = Array(a1 ,a2 ,a3 ,a4 ,a5 ,a6 ,a7 ,a8 ,a9 ,a10,a11,a12,a13,
+                            a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,
+                            a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38)
 
        val answers2 = Array.ofDim[Array[Boolean]](38)
        if (DEBUG) println(s"answers2.size: ${answers2.length}")
@@ -1047,5 +1185,5 @@ object DFATester extends App{
 
        testSuiteEquality(machines,answers2)
 
-
+       testSuitMinizeSoft(machines,min_machines)
 }
