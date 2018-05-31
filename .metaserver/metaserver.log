@@ -33862,3 +33862,6 @@
 16:57:29.027 INFO  s.m.l.s.InMemorySymbolIndex - resolveName at Uri(file:///Users/MacBot/Projects/TheoryAssistant/src/main/scala/theory/DFA.scala):177:19
 16:57:30.820 INFO  s.m.l.p.DocumentHighlightProvider$ - Document highlight in Uri(file:///Users/MacBot/Projects/TheoryAssistant/src/main/scala/theory/DFA.scala)
 16:57:30.820 INFO  s.m.l.s.InMemorySymbolIndex - resolveName at Uri(file:///Users/MacBot/Projects/TheoryAssistant/src/main/scala/theory/DFA.scala):158:25
+17:18:26.025 INFO  s.m.l.s.InMemorySymbolIndex - resolveName at Uri(file:///Users/MacBot/Projects/TheoryAssistant/src/main/scala/theory/DFA.scala):9:36
+11:01:29.584 INFO  s.m.l.p.DocumentHighlightProvider$ - Document highlight in Uri(file:///Users/MacBot/Projects/TheoryAssistant/src/main/scala/theory/DFA.scala)
+11:01:29.594 INFO  s.m.l.s.InMemorySymbolIndex - resolveName at Uri(file:///Users/MacBot/Projects/TheoryAssistant/src/main/scala/theory/DFA.scala):158:25

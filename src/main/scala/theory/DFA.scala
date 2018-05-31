@@ -26,7 +26,7 @@ class DFA() extends FiniteAutomaton
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     private val DEBUG    = false
-    private val DEBUGG   = true
+    private val DEBUGG   = false
     private val DEBUGGG  = false
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     /*		The private instance variables		   */		// TODO : make start and name a val
