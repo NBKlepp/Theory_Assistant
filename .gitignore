@@ -1,3 +1,6 @@
 target/*
 *.[oa]
 *DS_Store
+.metaserver/*
+keepFromGit/*
+keepFromGit/SubmissionGrader.scala

@@ -5,6 +5,12 @@ import TypeDefs._
 import scala.io.Source
 import java.io.{PrintWriter,FileWriter}
 
+final case class NoSubmissionException(private val message : String = "",
+                                       private val cause : Throwable = None.orNull)
+                                       extends Exception(message,cause)
+final case class MachineParserException(private val message : String = "",
+                                        private val cause : Throwable = None.orNull)
+                                        extends Exception(message,cause)
 object SubmissionGrader extends App{
 
 
@@ -13,9 +19,9 @@ object SubmissionGrader extends App{
        val name = args(0)
        val solution = args(1)
        val HW = args(2)
-    
+
        val j = name.indexOf(".txt")
-       
+
 
        val nname = name.substring(0,j)
        val inFiles  = Array(s"data/${HW}/${name}",s"data/${solution}")
@@ -55,17 +61,17 @@ try{
 	       	   case 'd' => makeDelta(line,i)
 	       	   case 'q' => makeStart(line,i)
 	       	   case 'F' => makeFinal(line,i)
-	       	   case _   => 
+	       	   case _   =>
 	       } // match
 	       } // if
-           } // for line       
+           } // for line
        } // for i
 
        if(DEBUG){
         println("**************                 CHECK OUT THESE MACHINE NAMES                   ********************")
 	for (name <- machineNames) println(s"machineNames: ${name}")
        }
-       
+
        def makeFinal(line : String, i : Int){
        	   if (DEBUG) println("\t\t**************MAKING FINAL**************")
            val tokens = line.replace("F={"," ").replace("};"," ").replace(","," ").split(" ").map( x => x.trim() ).filter( (x : String) => x.length > 0 )
@@ -89,7 +95,7 @@ try{
 	   if (DEBUG) println(s"Making delta from $line")
        	   val tokens = line.split("=")
 	   if (DEBUG) println(s"Tokens: ${tokens.deep}")
-	   val iinput = if ( tokens.size >0 ) 
+	   val iinput = if ( tokens.size >0 )
 	        tokens(0).replace("d("," ").replace(")"," ").replace(","," ").split(" ").map( x => x.trim() ).filter( (x :String) => x.length > 0 )
 	    		else Array("","")
 	   if (DEBUG) println(s"resulting iinput: ${iinput.deep}, iinput.length: ${iinput.length}")
@@ -129,7 +135,7 @@ try{
 	   for ( t <- tokens ) sigma += t
 	   machineSigmas(i) += workingOn -> sigma
 	   if (DEBUG) println(s"Sigma made: $sigma")
-	   
+
        }
 
        def changeWork(line : String,i : Int){
@@ -162,7 +168,7 @@ try{
 	       if (DEBUG) println(s"\t\t******MADE NEW MACHINE********\n ${submissionMachines(name)}\n")
            }
        }
-       
+
        val results = Map[String,String]()
        var points = 0.0
        var avail = 0.0
@@ -186,10 +192,10 @@ try{
  	      if (!res){
 	      	 println(s"\tOne correct machine was: $m")
 		 println(s"\tYour submission machine was: $mm")
-		 
+
 		 pw.println(s"\tOne correct machine was: $m")
 		 pw.println(s"\tYour submission machine was: $mm")
-		 
+
 		 //val rex1 = GNFA.convert(m)
 		 //val rex2 = GNFA.convert(mm)
 		 val m3 = m.intersect(mm.complement())
@@ -208,11 +214,11 @@ try{
 		 }
 		 results += name -> s"fail : $failVal}"
 	      }
-	      
+
 	   } // if
 	   else if ( (submissionMachines contains name) && !(submissionMachines(name).isValid()) ) {
 	   	println(s"Machine submission for $name was invalid specifications")
-	   	pw.println(s"Machine submission for $name was invalid specifications")		
+	   	pw.println(s"Machine submission for $name was invalid specifications")
 		failVal = 1
 		results += name -> s"fail : $failVal"
 	   }
@@ -233,7 +239,7 @@ try{
        }
        println(s"Points: ${points*10} out of ${avail}")
        pw.println(s"Points: ${points*10} out of ${avail}")
-       
+
        } catch{
        	 case e => {
 	      println(s"Error in running autograder: $e")
@@ -243,7 +249,7 @@ try{
 	      pw.println(s"${e.getStackTrace.mkString("\n")}")
 
 	 }
-	 
+
        }
        pw.close()
 }
