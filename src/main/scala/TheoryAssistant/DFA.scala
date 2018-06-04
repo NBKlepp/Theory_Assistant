@@ -175,8 +175,14 @@ class DFA() extends FiniteAutomaton
       new DFA(states,alphabet,delta,start,accept,this.name+"_COMP")
     }
 
+    @throws(classOf[MachineException])
     def union(m2 : DFA) : DFA =
     {
+      if ( m2.getAlphabet() != this.alphabet) {
+        throw new MachineException(s"Cannot union m1 with alphabet " +
+                                   s"${this.alphabet} and m2 with "  +
+                                   s" alphabet ${m2.getAlphabet()}")
+      } // if
       val states = Set[State]()
 
 	    val delta1 = this.delta
@@ -219,8 +225,14 @@ class DFA() extends FiniteAutomaton
 	    new DFA(states, alphabet, delta, start, accept, name)
     } // union
 
+    @throws(classOf[MachineException])
     def intersect(m : DFA) : DFA =
     {
+      if ( m.getAlphabet() != this.alphabet) {
+        throw new MachineException(s"Cannot intersect m1 with alphabet " +
+                                   s"${this.alphabet} and m2 with "      +
+                                   s" alphabet ${m.getAlphabet()}")
+      }
 	    val m2 : DFA = m.DFAify()
 	    if (DEBUG) println(s"intersecting $toString \nand ${m2.toString}")
 
@@ -296,9 +308,14 @@ class DFA() extends FiniteAutomaton
 	    return (accept intersect reachable).size == 0
     } // empty
 
+    @throws(classOf[MachineException])
     def equals(m2: DFA) : Boolean =
     {
-
+      if ( m2.getAlphabet() != this.alphabet) {
+        throw new MachineException(s"Cannot compare m1 with alphabet " +
+                                   s"${this.alphabet} and m2 with "    +
+                                   s" alphabet ${m2.getAlphabet()}")
+      }
       val m1Comp = complement()
 	    val m2Comp = m2.complement()
 	    val mm1	   = intersect(m2Comp)

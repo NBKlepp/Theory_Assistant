@@ -322,7 +322,13 @@ object parserTest extends App{
   }
   try{
     val m6 = p.parseDFA("Data/M6")
-    println(s"M5: \n${m6}")
+    println(s"M6: \n${m6}")
+  }catch{
+    case pe : ParserException => println(pe)
+  }
+  try{
+    val m7 = p.parseDFA("Data/M7")
+    println(s"M7: \n${m7}")
   }catch{
     case pe : ParserException => println(pe)
   }
