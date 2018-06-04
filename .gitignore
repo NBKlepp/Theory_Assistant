@@ -4,3 +4,4 @@ target/*
 .metaserver/*
 keepFromGit/*
 keepFromGit/SubmissionGrader.scala
+project/*
