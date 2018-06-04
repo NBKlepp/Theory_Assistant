@@ -159,7 +159,7 @@ class Parser(){
     var tokens = lline.replace("Q={","")
                       .replace("}","" )
                       .split(",")
-    for (t <- tokens){
+    for (t <- tokens if t.length > 0){
       states += t
     } // for
     return states
@@ -172,7 +172,7 @@ class Parser(){
     var tokens = lline.replace("S={","").
                       replace("}","" ).
                       split(",")
-    for (t <- tokens){
+    for (t <- tokens if t.length > 0){
       sigma += t
     } // for
     return sigma
@@ -192,7 +192,7 @@ class Parser(){
     var tokens = lline.replace("F={","").
                       replace("}","" ).
                       split(",")
-    for (t <- tokens){
+    for (t <- tokens if t.length > 0){
       accept += t
     } // for
     return accept
@@ -283,8 +283,8 @@ class Parser(){
 
   @throws(classOf[ParserException])
   private def validateAccept(states : Set[State], accept : Set[State]){
-    if (!(accept subsetOf states)){
-      throw new ParserException(s"Bad accept state set : ${accept}")
+    if ( !(accept subsetOf states) ){
+      throw new ParserException(s"Bad accept state(s) : ${accept}")
     } // if
   } // validateAccept
 
@@ -317,6 +317,12 @@ object parserTest extends App{
   try{
     val m5 = p.parseDFA("Data/M5")
     println(s"M5: \n${m5}")
+  }catch{
+    case pe : ParserException => println(pe)
+  }
+  try{
+    val m6 = p.parseDFA("Data/M6")
+    println(s"M5: \n${m6}")
   }catch{
     case pe : ParserException => println(pe)
   }
