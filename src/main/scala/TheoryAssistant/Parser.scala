@@ -29,7 +29,7 @@ class Parser(){
 
   @throws(classOf[NoSubmissionException])
   @throws(classOf[ParserException])
-  def parseFile(fil : String, typ : Int) : FiniteAutomaton =
+  def parseDFA(fil : String) : DFA =
   {
       //Make sure there is a submission file
       if(! Files.exists(Paths.get(fil))) throw new NoSubmissionException(fil)
@@ -39,19 +39,6 @@ class Parser(){
                          filterNot((x: Char) => x.isWhitespace).
                          split(";")
 
-      try{
-        typ match{
-          case _DFA => return parseDFA(lines)
-          case _NFA => return parseNFA(lines)
-        }
-      }catch{
-        case pe  : ParserException => throw pe
-      } // catch
-  } // parseFile
-
-  @throws(classOf[ParserException])
-  private def parseDFA(lines : Array[String]) : DFA =
-  {
       var states   = Set[State]()
       var alphabet = Set[Symbl]()
       var delta    = Map[(State,Symbl),State]()
@@ -92,9 +79,18 @@ class Parser(){
       return new DFA(states,alphabet,delta,start,accept, name)
   } // parseDFA
 
+  @throws(classOf[NoSubmissionException])
   @throws(classOf[ParserException])
-  private def parseNFA(lines : Array[String]) : NFA =
+  def parseNFA(fil : String) : NFA =
   {
+    //Make sure there is a submission file
+    if(! Files.exists(Paths.get(fil))) throw new NoSubmissionException(fil)
+
+    val lines = Source.fromFile(fil).
+                       mkString.
+                       filterNot((x: Char) => x.isWhitespace).
+                       split(";")
+
     var states   = Set[State]()
     var alphabet = Set[Symbl]()
     var delta    = Map[(State,Symbl),Set[State]]()
@@ -297,29 +293,29 @@ class Parser(){
 object parserTest extends App{
   val p = new Parser()
 
-  val m1 = p.parseFile("Data/M1",_DFA)
+  val m1 = p.parseDFA("Data/M1")
   println(s"M1: \n${m1}")
   try{
     println("making m2")
-    val m2 = p.parseFile("Data/M2",_DFA)
+    val m2 = p.parseDFA("Data/M2")
     println(s"M2: \n${m2}")
   }catch{
     case pe : ParserException => println(pe)
   }
   try{
-    val m3 = p.parseFile("Data/M3",_DFA)
+    val m3 = p.parseDFA("Data/M3")
     println(s"M3: \n${m3}")
   }catch{
     case pe : ParserException => println(pe)
   }
   try{
-    val m4 = p.parseFile("Data/M4",_DFA)
+    val m4 = p.parseDFA("Data/M4")
     println(s"M4: \n${m4}")
   }catch{
     case pe : ParserException => println(pe)
   }
   try{
-    val m5 = p.parseFile("Data/M5",_DFA)
+    val m5 = p.parseDFA("Data/M5")
     println(s"M5: \n${m5}")
   }catch{
     case pe : ParserException => println(pe)
