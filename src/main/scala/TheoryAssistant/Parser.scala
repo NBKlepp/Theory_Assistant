@@ -58,6 +58,7 @@ class Parser(){
             case 'd' => deltaLines += line
             case 'q' => start = makeStart(line)
             case 'F' => accept = makeAccept(line)
+            case '/' =>
             case _   => throw new ParserException(line)
           }
         }
@@ -293,41 +294,41 @@ class Parser(){
 object parserTest extends App{
   val p = new Parser()
 
-  val m1 = p.parseDFA("Data/M1")
+  val m1 = p.parseDFA("Data/Parser/DFA/M1")
   println(s"M1: \n${m1}")
   try{
     println("making m2")
-    val m2 = p.parseDFA("Data/M2")
+    val m2 = p.parseDFA("Data/Parser/DFA/M2")
     println(s"M2: \n${m2}")
   }catch{
     case pe : ParserException => println(pe)
   }
   try{
-    val m3 = p.parseDFA("Data/M3")
+    val m3 = p.parseDFA("Data/Parser/DFA/M3")
     println(s"M3: \n${m3}")
   }catch{
     case pe : ParserException => println(pe)
   }
   try{
-    val m4 = p.parseDFA("Data/M4")
+    val m4 = p.parseDFA("Data/Parser/DFA/M4")
     println(s"M4: \n${m4}")
   }catch{
     case pe : ParserException => println(pe)
   }
   try{
-    val m5 = p.parseDFA("Data/M5")
+    val m5 = p.parseDFA("Data/Parser/DFA/M5")
     println(s"M5: \n${m5}")
   }catch{
     case pe : ParserException => println(pe)
   }
   try{
-    val m6 = p.parseDFA("Data/M6")
+    val m6 = p.parseDFA("Data/Parser/DFA/M6")
     println(s"M6: \n${m6}")
   }catch{
     case pe : ParserException => println(pe)
   }
   try{
-    val m7 = p.parseDFA("Data/M7")
+    val m7 = p.parseDFA("Data/Parser/DFA/M7")
     println(s"M7: \n${m7}")
   }catch{
     case pe : ParserException => println(pe)
