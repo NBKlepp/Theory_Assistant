@@ -167,31 +167,9 @@ class NFA() extends FiniteAutomaton
 	   return (finalState intersect accept ).size != 0
   } // compute
 
-  def epsilonHop(setState : Set[State]) : Set[State] =
-  {
-    val found   = setState.clone()
-	  val toCheck = setState.clone()
-	  for ( state <- setState ) toCheck += state
-    if (DEBUG) println(s"Checking for epsilonTransitions from $setState")
-	  while( toCheck.size != 0 ){
-	       val checking = toCheck.clone
-	       for ( state <- checking ){
-	       	   if (DEBUG) println(s"hopping from $state")
-	       	   val newStates = delta(state,epsilon)
-		         if (DEBUG) println(s"can hop to $newStates")
-		         if ( (newStates diff found).size > 0 ){
-		             toCheck ++= newStates
-		             found   ++= newStates
-		             if (DEBUG) println(s"Found some new states to hop from.")
-		         } // if
-		     toCheck -= state
-         } // for
-	  } // while
-	  found
-  } // epsilonHop
-
   def equals(m2 : NFA) = DFAify().equals(m2.DFAify())
   def equals(m2 : DFA) = DFAify().equals(m2)
+
   def kleeneStar() : NFA =
   {
 	    if (DEBUG) println(s"starring...")
@@ -357,6 +335,29 @@ class NFA() extends FiniteAutomaton
   //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   /*			The private methods.				                                 */
   //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  
+  private def epsilonHop(setState : Set[State]) : Set[State] =
+  {
+    val found   = setState.clone()
+    val toCheck = setState.clone()
+    for ( state <- setState ) toCheck += state
+    if (DEBUG) println(s"Checking for epsilonTransitions from $setState")
+    while( toCheck.size != 0 ){
+         val checking = toCheck.clone
+         for ( state <- checking ){
+             if (DEBUG) println(s"hopping from $state")
+             val newStates = delta(state,epsilon)
+             if (DEBUG) println(s"can hop to $newStates")
+             if ( (newStates diff found).size > 0 ){
+                 toCheck ++= newStates
+                 found   ++= newStates
+                 if (DEBUG) println(s"Found some new states to hop from.")
+             } // if
+         toCheck -= state
+         } // for
+    } // while
+    found
+  } // epsilonHop
 
   private def setToString(set : Set[String]) : String = "{" + set.reduceLeft(_ + ";" +_) + "}"
 

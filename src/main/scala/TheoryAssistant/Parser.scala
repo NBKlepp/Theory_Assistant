@@ -32,7 +32,8 @@ class Parser(){
   def parseDFA(fil : String) : DFA =
   {
       //Make sure there is a submission file
-      if(! Files.exists(Paths.get(fil))) throw new NoSubmissionException(fil)
+      if(! Files.exists(Paths.get(fil))) throw new NoSubmissionException(
+                                                s"no submission found: ${fil}")
 
       val lines = Source.fromFile(fil).
                          mkString.
@@ -59,7 +60,8 @@ class Parser(){
             case 'q' => start = makeStart(line)
             case 'F' => accept = makeAccept(line)
             case '/' =>
-            case _   => throw new ParserException(line)
+            case _   => throw new ParserException(
+                                  s"unexpected machine syntax: ${line}")
           }
         }
       } // for line
@@ -85,7 +87,8 @@ class Parser(){
   def parseNFA(fil : String) : NFA =
   {
     //Make sure there is a submission file
-    if(! Files.exists(Paths.get(fil))) throw new NoSubmissionException(fil)
+    if(! Files.exists(Paths.get(fil))) throw new NoSubmissionException(
+                                                 s"no submission found: ${fil}")
 
     val lines = Source.fromFile(fil).
                        mkString.
@@ -111,7 +114,9 @@ class Parser(){
           case 'd' => deltaLines += line
           case 'q' => start = makeStart(line)
           case 'F' => accept = makeAccept(line)
-          case _   => throw new ParserException(s"Unrecognized machine spec: ${line}")
+          case '/' => 
+          case _   => throw new ParserException(
+                                s"Unrecognized machine syntax: ${line}")
         }
       }
     } // for line
@@ -148,8 +153,9 @@ class Parser(){
        ) throw new ParserException(s"Unrecognized machine spec: ${line}")
     lline = lline.substring(7,lline.length()-1)
     if (pattern.findAllIn(lline).toArray.length != 0) {
-      throw new ParserException(s"Unrecognized machine spec: ${line}")
-    }
+      throw new ParserException(s" Only alphanumeric characters are " +
+                                s"recognized in machine titles: ${line}")
+    } // if
     return lline
   } // makeName
 
@@ -224,18 +230,20 @@ class Parser(){
     val ddeltaLines = deltaLines.map(x => x.filterNot((y : Char) => y.isWhitespace)).
                                  map(x=>x.replace("d(","")).
                                  map(x=>x.replace(")={","#")).
-                                 map(x=>x.replace("})","")).
+                                 map(x=>x.replace("}","")).
                                  map(x=>x.split("#"))
-    for(t <- 0 until ddeltaLines.size){
+    for(t <- 0 until ddeltaLines.size if ddeltaLines(t).length > 0){
       if ( ddeltaLines(t).length < 2 ) {
-        throw new ParserException(s"Bad transition spec: ${deltaLines(t)}")
+        throw new ParserException(s"Bad transition spec. "+
+                                  s"Unrecognized input/output: ${deltaLines(t)}")
       }
       val (input,output) = (ddeltaLines(t)(0),ddeltaLines(t)(1))
       val iinput = input.split(",")
       var ooutput = output.split(",").toSet
       var oooutput = collection.mutable.Set(ooutput.toArray:_*)
       if (iinput.length < 2 ) {
-        throw new ParserException(s"Bad transition spec: ${deltaLines(t)}")
+        throw new ParserException(s"Bad transition spec. " +
+                                  s"Unexpected transition input: ${deltaLines(t)}")
       }
       val q = iinput(0)
       val a = iinput(1)
@@ -247,31 +255,45 @@ class Parser(){
 
   @throws(classOf[ParserException])
   private def validateDeltaDFA(states   : Set[State],
-                       alphabet : Set[Symbl],
-                       delta    : Map[(State,Symbl),State]){
+                               alphabet : Set[Symbl],
+                               delta    : Map[(State,Symbl),State]){
     for((k,r) <- delta){
       val q = k._1
       val a = k._2
-      if ( !(states   contains q) ||
-           !(states   contains r) ||
-           !(alphabet contains a)    ){
-             throw new ParserException(s"Bad Transition spec: d($q,$a)=$r")
-           } // if
+      if ( !(states contains q) ) {
+        throw new ParserException(s"Unexpected state " +
+                                  s"in transition spec: d($q,$a)=$r")
+      } // if
+      if ( !(states contains r) ) {
+        throw new ParserException(s"Unexpected state " +
+                                  s"in transition spec: d($q,$a)=$r")
+      } // if
+      if ( !(alphabet contains a) ){
+        throw new ParserException(s"Unexpected symbl " +
+                                  s"in transition spec: d($q,$a)=$r")
+      } // if
     } // for
   } // validateDeltaDFA
 
   @throws(classOf[ParserException])
   private def validateDeltaNFA(states   : Set[State],
-                       alphabet : Set[Symbl],
-                       delta    : Map[(State,Symbl),Set[State]]){
+                               alphabet : Set[Symbl],
+                               delta    : Map[(State,Symbl),Set[State]]){
     for((k,s) <- delta){
       val q = k._1
       val a = k._2
-      if ( !(states   contains q     ) ||
-           !(s        subsetOf states) ||
-           !(alphabet contains a     )    ){
-             throw new ParserException(s"Bad Transition spec: d($q,$a)=$s")
-           } // if
+      if ( !(states contains q) ) {
+        throw new ParserException(s"Unexpected state " +
+                                  s"in transition spec: d($q,$a)=$s")
+      } // if
+      if ( !(s subsetOf states) ) {
+        throw new ParserException(s"Unexpected state " +
+                                  s"in transition spec: d($q,$a)=$s")
+      } // if
+      if ( !(a == epsilon) && !(alphabet contains a) ) {
+        throw new ParserException(s"Unexpected symbl " +
+                                  s"in transition spec: d($q,$a)=$s")
+      } // if
     } // for
   } // validateDeltaDFA
 

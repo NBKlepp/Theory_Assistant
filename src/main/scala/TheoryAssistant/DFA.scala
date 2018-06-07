@@ -381,7 +381,6 @@ class DFA() extends FiniteAutomaton
 
     override def toString() : String =
     {
-	     s"${this.name}\n"                   +
 	     s"Start: $start\n"                  +
 	     s"Accept: ${setToString(accept)}\n" +
 	     s"Delta: \n$deltaString"
@@ -692,7 +691,7 @@ class DFA() extends FiniteAutomaton
     def deltaString : String =
     {
       var str = ""
-	    for ( (k,v) <- delta ) str = str + s"$k -> $v\n"
+	    for ( (k,v) <- delta ) str = str + s"d(${k._1},${k._2}) = $v\n"
 	    str
     } // deltaString
 
