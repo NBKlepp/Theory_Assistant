@@ -40,3 +40,5 @@ home$ sbt
 [info] Set current project to theoryassistant (in build file:/home/TheoryAssistant)
 > run-main theory.DFATester
 ```
+### Next Steps
+See the Wiki to learn more about how you can use the TheoryAsistant package in your educational environment. 

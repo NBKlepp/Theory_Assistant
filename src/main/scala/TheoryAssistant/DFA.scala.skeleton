@@ -1,5 +1,5 @@
 A//::::::::::::::::::::::::::::::::::::::::::::::
-/** Author: 
+/** Author:
  *  Date: June 6, 2017
  *  The DFA object represents a Deterministic Finite Automaton: M = (Q, SIGMA, delta, q0, F)
  *  	Q     = the set of states
@@ -10,7 +10,6 @@ A//::::::::::::::::::::::::::::::::::::::::::::::
  */
 //::::::::::::::::::::::::::::::::::::::::::::::
 
-package theory
 
 import scala.collection.mutable.{Set,Map}
 import TypeDefs._
@@ -41,12 +40,12 @@ class DFA() extends FiniteAutomaton
       private val states   = Set[State]()			// The set of states for the machine
       private val alphabet = Set[Symbl]()			// The alphabet for the strings to compute
       private val delta    = Map[(State,Symbl),State]()		// The transition function
-      private var start    = ""					// The start state of the machine 
+      private var start    = ""					// The start state of the machine
       private val accept   = Set[State]()			// The set of accept states for the machine
       private var name 	   = "M"				// The name of the machine
       private var valid    = true				// A boolean flag for indicating a valid machine description (or not)
       private var state    = start				// The state of the machine, which changes as a string is computed
-      
+
       def this(states : Set[State], alphabet : Set[Symbl], delta : Map[(State,Symbl),State], start : State, accept : Set[State], name : String ){
       	  this()
 	  // TODO implement
@@ -65,12 +64,12 @@ class DFA() extends FiniteAutomaton
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
-    private def setDelta(delta : Map[(State,Symbl),State]) = 
+    private def setDelta(delta : Map[(State,Symbl),State]) =
     {
 	if (DEBUG) println(s"Setting delta for $name.")
-	
+
 	//TODO implement
-	
+
 	if (DEBUG) println(s"Delta after setting: ${this.delta}")
     } // setDelta
 
@@ -86,12 +85,12 @@ class DFA() extends FiniteAutomaton
     	    if (DEBUG) println(s"Setting accept states for $name")
 
 	    //TODO implement
-	    
+
 	    if (DEBUG) println(s"this.accept: ${this.accept}")
     } // setAccept
-    
-    
-    
+
+
+
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     // The Accessor methods for the private instance variables
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -99,9 +98,9 @@ class DFA() extends FiniteAutomaton
     def getStates() = Set[State]() ++ states
 
     def getAlphabet() = Set[Symbl]() ++ alphabet
-	
+
     def getDelta() = Map[(State,Symbl),State]() ++ delta
-    
+
     def getAcceptStates() = Set[State]() ++ accept
 
     def getStartState() = start
@@ -119,7 +118,7 @@ class DFA() extends FiniteAutomaton
 	if (DEBUG) println(s"Computing $string on $name")
 
 	//TODO implement
-	
+
 	return true
     }
 
@@ -141,11 +140,11 @@ class DFA() extends FiniteAutomaton
     } // intersect
 
     def kleeneStar() = NFAify().kleeneStar().DFAify()
-    
+
     def NFAify()  =
     {
 	val newDelta = Map[(State,Symbl),Set[State]]()
-	for ( d <- delta ) newDelta += d._1 -> Set(d._2) 
+	for ( d <- delta ) newDelta += d._1 -> Set(d._2)
 	new NFA(states,alphabet,newDelta,start,accept,s"${name}_NFA")
     }
 
@@ -154,7 +153,7 @@ class DFA() extends FiniteAutomaton
 	return true
     } // empty
 
-    def equals(m2: DFA) : Boolean = 
+    def equals(m2: DFA) : Boolean =
     {
     	val m1Comp = complement()
 	val m2Comp = m2.complement()
@@ -165,7 +164,7 @@ class DFA() extends FiniteAutomaton
     }
 
     def equals(m2 : NFA) : Boolean = equals(m2.DFAify())
-  
+
     override def toString() : String =
     {
 	s"$name\n" +
@@ -185,22 +184,22 @@ class DFA() extends FiniteAutomaton
 	if (DEBUG) println(s"validating transition: $transition")
 	return ( validFromState(transition) && validToState(transition) && validInputSymbl(transition) && newInput(transition) )
     } // validTransition
-    
-    private def validFromState(transition : ((State,Symbl),State) )    : Boolean = {    	    
+
+    private def validFromState(transition : ((State,Symbl),State) )    : Boolean = {
     	    if (states contains transition._1._1) return true
 	    else handleInvalid(1,transition)
     } // validFromState
-    
+
     private def validToState(transition : ((State,Symbl),State))      : Boolean = {
     	    if (states contains transition._2) return true
-	    else handleInvalid(2,transition) 
+	    else handleInvalid(2,transition)
     } // validToState
-    
+
     private def validInputSymbl( transition : ((State,Symbl),State) ) : Boolean = {
     	    if (alphabet contains transition._1._2) return true
-	    else handleInvalid(3,transition) 
+	    else handleInvalid(3,transition)
     }
-    
+
     private def newInput( transition : ((State,Symbl),State))	: Boolean = {
     	    if (delta contains transition._1 ) handleInvalid(4,transition)
 	    else return true
@@ -226,16 +225,16 @@ class DFA() extends FiniteAutomaton
 	  case 4 => {
 	       println(s"Invalid transition: delta($fromState,$inputSymbl)->$toState) :: transition already specified for input ${transition._1} for ${name}.")
 	       valid = false
-	       } // case 4 
+	       } // case 4
 	}
 	false
     } // handleInvalid
 
     def setToString(set : Set[String]) : String = if (set.size!=0) "{" + set.reduceLeft(_ + ";" +_) + "}" else "{}"
-    
-    def deltaString : String = 
+
+    def deltaString : String =
     {
-	var str = "" 
+	var str = ""
 	//for ( key <- delta.keys ) str = str + s"$key => ${delta(key)}\n"
 	for ( (k,v) <- delta ) str = str + s"$k -> $v\n"
 	str
@@ -247,11 +246,11 @@ object DFATestMethods{
        def testAcceptance(m1 : DFA , s : String , expRes : Boolean){
        	   m1.compute(s) == expRes
        } // testAcceptance
-       
+
        def testEquality(m1 : DFA , m2 : DFA , expRes : Boolean){
        	   m1.equals(m2) == expRes
        } // testEquality
-       
+
        def testSuiteEquality(machines : Array[DFA], answers : Array[Array[Boolean]]){
        	   var pass = true
        	   for ( i <- 0 until answers.length ) {
@@ -267,7 +266,7 @@ object DFATestMethods{
 	       } // for j
 	       if (pass) println(s"Test suite equality passed for ${machines(i).getName()}")
 	   } // for i
-	   if (pass) println(s"testSuiteEqulity passed") 
+	   if (pass) println(s"testSuiteEqulity passed")
        } // testSuiteEqualitydef
 
        def testSuiteAcceptance(machine : DFA, strings : Array[String], answers : Array[Boolean]){
@@ -282,7 +281,7 @@ object DFATestMethods{
 		      pass = false
 		   } // if
 	   } // for
-	   if (pass) println(s"Acceptance suite passed for ${machine.getName()}") 
+	   if (pass) println(s"Acceptance suite passed for ${machine.getName()}")
        } // testSuiteEquality
 } // DFATestMethods
 
@@ -407,7 +406,7 @@ object DFATester extends App{
        val m1  = new DFA(states1,sigma1,delta1,start1,accept1,"M1")				// M1 accepts all even length strings
        val m2  = new DFA(states2,sigma2,delta2,start2,accept2,"M2")				// M2 accepts all strings with even 1s
        println(s"M2 after construction : $m2")
-       val m3  = new DFA(states3,sigma3,delta3,start3,accept3,"M3")				// M3 accepts all strings with even 0s 
+       val m3  = new DFA(states3,sigma3,delta3,start3,accept3,"M3")				// M3 accepts all strings with even 0s
        val m4  = new DFA(states4,sigma4,delta4,start4,accept4,"M4")				// M4 accepts strings with odd 0s
        val m5  = new DFA(states5,sigma5,delta5,start5,accept5,"M5")				// M5 accepts no strings
        val m6  = new DFA(states6,sigma6,delta6,start6,accept6,"M6")				// M6 accepts all strings with substring 001
@@ -421,7 +420,7 @@ object DFATester extends App{
        val m14 = new DFA(states14,sigma14,delta14,start14,accept14,"M14")				// M14 accepts all strings without 001 as a substring
        val m15 = new DFA(states15,sigma15,delta15,start15,accept15,"M15")				// M15 accepts all strings with odd 0s and even 1s
        val m16 = new DFA(states16,sigma16,delta16,start16,accept16,"M16")				// M16 accepts all strings with odd 0s or even 1s
-       
+
        val m17 = m2.intersect(m3)
        val m18 = m2.union(m3)
        val m19 = m2.intersect(m4)
@@ -446,7 +445,7 @@ object DFATester extends App{
        val m38 = m16.complement()
 
        val strings = Array("","11111","111111","10101","101010","110011","001100","01100","10011")
-       
+
        val a1 = Array(true,false,true,false,true,true,true,false,false)
        val a2 = Array(true,false,true,false,false,true,true,true,false)
        val a3 = Array(true,true,true,true,false,true,true,false,true)
@@ -503,113 +502,113 @@ object DFATester extends App{
 	       if ( i == j ) answers2(i)(j) = true
 	       else (i+1,j+1) match {
 		    case (2,35) => answers2(i)(j) = true
-		    
+
 		    case (3,28) => answers2(i)(j) = true
-		    
+
 		    case (4,26) => answers2(i)(j) = true
-		    
-		    
+
+
 		    case (6,36) => answers2(i)(j) = true
-		    
+
 		    case (7,38) => answers2(i)(j) = true
 		    case (7,21) => answers2(i)(j) = true
-		    
+
 		    case (8,37) => answers2(i)(j) = true
 		    case (8,22) => answers2(i)(j) = true
-		    
+
 		    case (9,17) => answers2(i)(j) = true
 		    case (9,34) => answers2(i)(j) = true
-		    
+
 		    case (10,33) => answers2(i)(j) = true
 		    case (10,18) => answers2(i)(j) = true
-		    
+
 		    case (11,23) => answers2(i)(j) = true
 		    case (11,32) => answers2(i)(j) = true
-		    
+
 		    case (12,31) => answers2(i)(j) = true
 		    case (12,24) => answers2(i)(j) = true
-		    
+
 		    case (13,25) => answers2(i)(j) = true
-		    
+
 		    case (14,27) => answers2(i)(j) = true
-		    
+
 		    case (15,30) => answers2(i)(j) = true
 		    case (15,19) => answers2(i)(j) = true
-		    
+
 		    case (16,20) => answers2(i)(j) = true
 		    case (16,29) => answers2(i)(j) = true
-		    
+
 		    case (17,9) => answers2(i)(j) = true
 		    case (17,34) => answers2(i)(j) = true
-		    
+
 		    case (18,10) => answers2(i)(j) = true
 		    case (18,33) => answers2(i)(j) = true
-		    
+
 		    case (19,15) => answers2(i)(j) = true
 		    case (19,30) => answers2(i)(j) = true
-		    
+
 		    case (20,16) => answers2(i)(j) = true
 		    case (20,29) => answers2(i)(j) = true
-		    
+
 		    case (21,7) => answers2(i)(j) = true
 		    case (21,38) => answers2(i)(j) = true
-		    
+
 		    case (22,8) => answers2(i)(j) = true
 		    case (22,37) => answers2(i)(j) = true
-		    
+
 		    case (23,11) => answers2(i)(j) = true
 		    case (23,32) => answers2(i)(j) = true
-		    
+
 		    case (24,12) => answers2(i)(j) = true
 		    case (24,31) => answers2(i)(j) = true
-		    
+
 		    case (25,13) => answers2(i)(j) = true
-		    
+
 		    case (26,4) => answers2(i)(j) = true
-		    
+
 		    case (27,14) => answers2(i)(j) = true
-		    
+
 		    case (28,3) => answers2(i)(j) = true
-		    
+
 		    case (29,16) => answers2(i)(j) = true
 		    case (29,20) => answers2(i)(j) = true
-		    
+
  		    case (30,15) => answers2(i)(j) = true
 		    case (30,19) => answers2(i)(j) = true
-		    
+
 		    case (31,12) => answers2(i)(j) = true
 		    case (31,24) => answers2(i)(j) = true
-		    
+
 		    case (32,11) => answers2(i)(j) = true
 		    case (32,23) => answers2(i)(j) = true
-		    
+
 		    case (33,10) => answers2(i)(j) = true
 		    case (33,18) => answers2(i)(j) = true
-		    
+
 		    case (34,9) => answers2(i)(j) = true
 		    case (34,17) => answers2(i)(j) = true
-		    
+
 		    case (35,2) => answers2(i)(j) = true
-		    
+
 		    case (36,6) => answers2(i)(j) = true
-		    
+
 		    case (37,8) => answers2(i)(j) = true
-		    
+
 		    case (38,7) => answers2(i)(j) = true
 		    case (38,21) => answers2(i)(j) = true
-		    
+
 		    case _ => answers2(i)(j) = false
-	       } // match	  
+	       } // match
 	   }
        }
-             
+
        for ( i <- 0 until machines.length ) {
        	   val m : DFA = machines(i)
 	   val a : Array[Boolean]= answers(i)
        	   testSuiteAcceptance(m,strings,a)
        } // for
 
-       testSuiteEquality(machines,answers2)       
+       testSuiteEquality(machines,answers2)
 }
 
 object smallDFAtest extends App{
