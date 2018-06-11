@@ -1,0 +1,16 @@
+//See 1.5.c2 for another way of doing this;
+//This machine is a DFA which recognizes all strings;
+//that contain either the substring ab or ba;
+title = "15c";
+Q = {0,a,b,f};
+S={a,b};
+d(0,a)=a;
+d(0,b)=b;
+d(a,a)=a;
+d(a,b)=f;
+d(b,a)=f;
+d(b,b)=b;
+d(f,a)=f;
+d(f,b)=f;
+q0=0;
+F={f};

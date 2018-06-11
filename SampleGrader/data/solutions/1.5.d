@@ -1,0 +1,12 @@
+//This machine recognizes the complement of the language a*b*;
+title = "15d";
+Q = {0,1,2};
+S = {a,b};
+d(0,a)=0;
+d(0,b)=1;
+d(1,a)=2;
+d(1,b)=1;
+d(2,a)=2;
+d(2,b)=2;
+F={2};
+q0=0;
