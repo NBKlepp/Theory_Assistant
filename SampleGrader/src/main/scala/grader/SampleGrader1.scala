@@ -15,7 +15,7 @@ import net.liftweb.json.Printer._
 import scala.io.Source
 import scala.collection.mutable.Map
 
-object SampleGrader extends App{
+object SampleGrader1 extends App{
 
   //sscores is really just for the autolab convention, where the format
   //has to be a dictionary {"scores" : {"1a":10,"1b":10,...}}
@@ -27,18 +27,18 @@ object SampleGrader extends App{
   //the parser we'll use to parse our machines with
   val p = new Parser()
   val exercises = args(0)
-
+  val solDir = "data/solutions1"
   /*
     Just loop through the assignment file parsing each submission machine
     and solution machine in turn and comparing them. If they're the same,
-    good. If not, tell the student why not. 
+    good. If not, tell the student why not.
   */
   for (line <- Source.fromFile(exercises).getLines){
     print(s"\n\nGrading exercise ${line}...\n")
     var points = 10
     try{
       val sub = p.parseDFA(s"data/submission/${line}")
-      val sol = p.parseDFA(s"data/solutions/${line}")
+      val sol = p.parseDFA(s"${solDir}/${line}")
 
       if ( sub.equals(sol) ) {
          println( s"${line} passed evaluation" )

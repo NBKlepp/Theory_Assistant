@@ -84,26 +84,26 @@ object SampleGrader2 extends App{
   val scores = Map[String,Int]()
   val p = new Parser()
 
-  val machineDir = "data/solutions/"
+  val machineDir = "data/solutions2/"
 
   //The solution to 1.4.a is the intersection of two simpler machines...
-  val m14a1 = p.parseDFA(machineDir + "1.4.a1")
-  val m14a2 = p.parseDFA(machineDir + "1.4.a2")
+  val m14a1 = p.parseDFA(machineDir + "1.4a1")
+  val m14a2 = p.parseDFA(machineDir + "1.4a2")
   val m14a = m14a1.intersect(m14a2)
 
-  val m14c = p.parseDFA(machineDir + "1.4.c")
+  val m14c = p.parseDFA(machineDir + "1.4c")
 
   //The solution to 1.5.c is the complement of a simpler machine...
-  val m15c = p.parseDFA(machineDir + "1.5.c.2").complement()
+  val m15c = p.parseDFA(machineDir + "1.5c").complement()
 
   /* The solution to 1.5.d is the complement of a machine which is *
    * far easier to write as an NFA than a DFA                      */
-  val m15d = p.parseNFA(machineDir + "1.5.d2").complement().DFAify()
+  val m15d = p.parseNFA(machineDir + "1.5d").complement().DFAify()
 
-  scores += "1.4.a" -> compareDFAs(m14a,"1.4.a")
-  scores += "1.4.c" -> compareDFAs(m14c,"1.4.c")
-  scores += "1.5.c" -> compareDFAs(m15c,"1.5.c")
-  scores += "1.5.d" -> compareDFAs(m15d,"1.5.d")
+  scores += "1.4.a" -> compareDFAs(m14a,"1.4a")
+  scores += "1.4.c" -> compareDFAs(m14c,"1.4c")
+  scores += "1.5.c" -> compareDFAs(m15c,"1.5c")
+  scores += "1.5.d" -> compareDFAs(m15d,"1.5d")
 
   implicit val formats = net.liftweb.json.DefaultFormats
   sscores += "scores" -> scores.toMap
