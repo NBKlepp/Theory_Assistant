@@ -83,19 +83,19 @@ class DFA() extends FiniteAutomaton
     {
       for ( transition <- delta if validTransition(transition) )  {
         this.delta += (transition._1 -> transition._2)
-	     } // for transition
+	    } // for transition
       var null_added = false
 	    for ( symbl <- alphabet ) {								//Fill out the unspecified transitions.
 	      for ( state <- states ) {
-	    	  val input = (state,symbl)
-	    	  if ( !( delta contains input) ) {
+	        val input = (state,symbl)
+	     	  if ( !( delta contains input) ) {
             this.states += NullState
             this.delta += input -> NullState
             null_added = true
           } // if
 	      } // for state
-	    } // for symbl
-      if ( null_added) {
+	     // for symbl
+        if ( null_added) {
         for ( symbl <- alphabet ) {
           val input = (NullState,symbl)
           this.delta += input -> NullState
