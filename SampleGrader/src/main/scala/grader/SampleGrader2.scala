@@ -4,9 +4,6 @@
   and over again. Just an idea.
 */
 import TheoryAssistant._
-import net.liftweb.json.JsonAST._
-import net.liftweb.json.Extraction._
-import net.liftweb.json.Printer._
 import scala.io.Source
 import scala.collection.mutable.Map
 
@@ -80,7 +77,6 @@ object SampleGrader2 extends App{
       return points
   } // compareDFAs
 
-  val sscores = Map[String,scala.collection.immutable.Map[String,Int]]()
   val scores = Map[String,Int]()
   val p = new Parser()
 
@@ -105,7 +101,4 @@ object SampleGrader2 extends App{
   scores += "1.5.c" -> compareDFAs(m15c,"1.5c")
   scores += "1.5.d" -> compareDFAs(m15d,"1.5d")
 
-  implicit val formats = net.liftweb.json.DefaultFormats
-  sscores += "scores" -> scores.toMap
-  println(compact(render(decompose(sscores.toMap))))
 } // SampleGrader
